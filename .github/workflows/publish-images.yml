@@ -48,13 +48,3 @@ jobs:
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/metatool-remote-hosting:latest
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/metatool-remote-hosting:${{ github.sha }}
 
-      - name: Build and push drizzle-migrate image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: Dockerfile
-          target: migrator
-          push: true
-          tags: |
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/drizzle-migrate:latest
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/drizzle-migrate:${{ github.sha }}
