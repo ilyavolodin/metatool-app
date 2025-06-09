@@ -48,3 +48,14 @@ jobs:
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/metatool-remote-hosting:latest
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/metatool-remote-hosting:${{ github.sha }}
 
+      - name: Build and push metatool-migrator image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: Dockerfile
+          target: migrator
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/metatool-migrator:latest
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/metatool-migrator:${{ github.sha }}
+

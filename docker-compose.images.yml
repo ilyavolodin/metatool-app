@@ -1,7 +1,7 @@
 services:
   metatool-web:
     container_name: metatool-web
-    image: ghcr.io/metatool-ai/metatool-app/metatool-web:latest
+    image: ghcr.io/ilyavolodin/metatool-app/metatool-web:latest
     env_file:
       - .env
     restart: always
@@ -16,7 +16,7 @@ services:
 
   metatool-remote-hosting:
     container_name: metatool-remote-hosting
-    image: ghcr.io/metatool-ai/metatool-app/metatool-remote-hosting:latest
+    image: ghcr.io/ilyavolodin/metatool-app/metatool-remote-hosting:latest
     env_file:
       - .env
     restart: always
@@ -44,6 +44,15 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+
+  drizzle-migrate:
+    container_name: drizzle-migrate
+    image: ghcr.io/ilyavolodin/metatool-app/metatool-migrator:latest
+    env_file:
+      - .env
+    depends_on:
+      metatool-postgres:
+        condition: service_healthy
 
 
 volumes:

@@ -44,6 +44,9 @@ images with the provided `docker-compose.images.yml` file:
 docker compose -f docker-compose.images.yml up -d
 ```
 
+This compose file also starts a `drizzle-migrate` service that applies the
+database migrations before the application containers run.
+
 Then open http://localhost:12005 in your browser to open MetaMCP App.
 
 It is recommended to have npx (node.js based mcp) and uvx (python based mcp) installed globally.
