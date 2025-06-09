@@ -36,6 +36,14 @@ cp example.env .env
 docker compose up --build -d
 ```
 
+If you do not want to build the images locally, a prebuilt version of each
+service is published to the GitHub Container Registry.  You can run those
+images with the provided `docker-compose.images.yml` file:
+
+```bash
+docker compose -f docker-compose.images.yml up -d
+```
+
 Then open http://localhost:12005 in your browser to open MetaMCP App.
 
 It is recommended to have npx (node.js based mcp) and uvx (python based mcp) installed globally.

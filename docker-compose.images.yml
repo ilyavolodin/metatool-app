@@ -1,0 +1,51 @@
+services:
+  metatool-web:
+    container_name: metatool-web
+    image: ghcr.io/metatool-ai/metatool-app/metatool-web:latest
+    env_file:
+      - .env
+    restart: always
+    ports:
+      - '12005:3000'
+    environment:
+      - NODE_ENV=production
+    depends_on:
+      - metatool-postgres
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  metatool-remote-hosting:
+    container_name: metatool-remote-hosting
+    image: ghcr.io/metatool-ai/metatool-app/metatool-remote-hosting:latest
+    env_file:
+      - .env
+    restart: always
+    ports:
+      - '12007:12007'
+    environment:
+      - NODE_ENV=production
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  metatool-postgres:
+    container_name: metatool-postgres
+    image: postgres:16.2-alpine3.18
+    restart: always
+    environment:
+      POSTGRES_DB: metatool
+      POSTGRES_USER: metatool
+      POSTGRES_PASSWORD: m3t4t00l
+    ports:
+      - '8432:5432'
+    volumes:
+      - metatool-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U metatool" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+
+volumes:
+  metatool-postgres:
+    driver: local
