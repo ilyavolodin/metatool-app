@@ -30,6 +30,17 @@ app.use((req, res, next) => {
   next();
 });
 
+// Log incoming requests and their responses for easier debugging
+app.use((req, res, next) => {
+  console.log(`${req.method} ${req.originalUrl}`);
+  res.on('finish', () => {
+    console.log(
+      `${res.statusCode} ${req.method} ${req.originalUrl}`
+    );
+  });
+  next();
+});
+
 // MetaMCP entrypoint
 app.get('/mcp', handleMetaMcpGet);
 app.post('/mcp', handleMetaMcpPost);
@@ -52,12 +63,24 @@ app.get('/config', (req, res) =>
   handleConfig(req, res, values.env, values.args)
 );
 
+// Warn when a request does not match any route
+app.use((req, res) => {
+  console.warn('Unhandled request', req.method, req.originalUrl);
+  res.status(404).end();
+});
+
 // Start the server
 const PORT = process.env.PORT || 12007;
 const server = app.listen(PORT);
 
 server.on('listening', () => {
-  console.log(`⚙️ Proxy server listening on port ${PORT}`);
+  const addr = server.address();
+  console.log(`⚙️ Proxy server listening on port ${PORT}`, addr);
+  console.log('Server started with options:', values);
+});
+
+server.on('close', () => {
+  console.log('Proxy server closed');
 });
 
 server.on('error', (err) => {

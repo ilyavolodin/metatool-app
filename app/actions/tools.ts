@@ -40,6 +40,8 @@ export async function saveToolsToDatabase(
     return { success: true, count: 0 };
   }
 
+  console.log(`Saving ${tools.length} tools for MCP server ${mcpServerUuid}`);
+
   // Format tools for database insertion
   const toolsToInsert = tools.map((tool) => ({
     name: tool.name,
@@ -63,6 +65,6 @@ export async function saveToolsToDatabase(
       },
     })
     .returning();
-
+  console.log(`Saved ${results.length} tools for MCP server ${mcpServerUuid}`);
   return { success: true, count: results.length };
 }

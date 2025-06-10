@@ -28,6 +28,7 @@ export const createTransport = async (req: express.Request): Promise<Transport> 
   console.log('Query parameters:', query);
 
   const transportType = query.transportType as string;
+  console.log(`Creating transport of type ${transportType}`);
 
   if (transportType === 'stdio') {
     const command = query.command as string;
@@ -50,6 +51,12 @@ export const createTransport = async (req: express.Request): Promise<Transport> 
     try {
       await transport.start();
       console.log(`MCP server started: ${cmd} ${args.join(' ')}`);
+      transport.onclose = () => {
+        console.log(`MCP server process exited: ${cmd}`);
+      };
+      transport.onerror = (err) => {
+        console.error('MCP server transport error:', err);
+      };
     } catch (error) {
       console.error(
         `Failed to start MCP server process: ${cmd} ${args.join(' ')}`,
@@ -110,6 +117,8 @@ export const createTransport = async (req: express.Request): Promise<Transport> 
     await transport.start();
 
     console.log('Connected to SSE transport');
+    transport.onclose = () => console.log('SSE transport closed');
+    transport.onerror = (err) => console.error('SSE transport error:', err);
     return transport;
   } else if (transportType === 'streamable_http') {
     const url = query.url as string;
@@ -147,6 +156,8 @@ export const createTransport = async (req: express.Request): Promise<Transport> 
     );
     await transport.start();
     console.log('Connected to Streamable HTTP transport');
+    transport.onclose = () => console.log('HTTP transport closed');
+    transport.onerror = (err) => console.error('HTTP transport error:', err);
     return transport;
   } else {
     console.error(`Invalid transport type: ${transportType}`);
@@ -188,6 +199,12 @@ export const createMetaMcpTransport = async (apiKey: string): Promise<Transport>
   try {
     await transport.start();
     console.log(`MetaMCP server started: ${cmd} ${args.join(' ')}`);
+    transport.onclose = () => {
+      console.log(`MetaMCP server process exited: ${cmd}`);
+    };
+    transport.onerror = (err) => {
+      console.error('MetaMCP transport error:', err);
+    };
   } catch (error) {
     console.error(
       `Failed to start MetaMCP server process: ${cmd} ${args.join(' ')}`,
