@@ -37,8 +37,9 @@ docker compose up --build -d
 ```
 
 If you do not want to build the images locally, a prebuilt version of each
-service is published to the GitHub Container Registry.  You can run those
-images with the provided `docker-compose.images.yml` file:
+service (including the nginx reverse proxy) is published to the GitHub
+Container Registry.  You can run those images with the provided
+`docker-compose.images.yml` file:
 
 ```bash
 docker compose -f docker-compose.images.yml up -d
