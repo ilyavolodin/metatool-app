@@ -43,9 +43,9 @@ import { McpServerStatus, McpServerType, ProfileCapability } from '@/db/schema';
 import { useProfiles } from '@/hooks/use-profiles';
 import { useProjects } from '@/hooks/use-projects';
 import { useToast } from '@/hooks/use-toast';
-import * as logger from '@/lib/logger';
 import { useConnection } from '@/hooks/useConnection';
 import { ConnectionStatus } from '@/lib/constants';
+import * as logger from '@/lib/logger';
 import { McpServer } from '@/types/mcp-server';
 
 import ServerNotifications from "./ServerNotifications";
