@@ -233,12 +233,8 @@ export function useConnection({
 
   const checkProxyHealth = async () => {
     try {
-      const proxyHealthUrl = new URL(
-        process.env.USE_DOCKER_HOST === 'true'
-          ? `http://host.docker.internal:12007/health`
-          : `http://localhost:12007/health`
-      );
-      logger.log('Checking proxy health', proxyHealthUrl.toString());
+      const proxyHealthUrl = '/api/proxy-health';
+      logger.log('Checking proxy health via', proxyHealthUrl);
       const proxyHealthResponse = await fetch(proxyHealthUrl);
       const proxyHealth = await proxyHealthResponse.json();
       if (proxyHealth?.status !== 'ok') {
