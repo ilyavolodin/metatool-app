@@ -38,6 +38,7 @@ import {
   Notification,
   StdErrNotificationSchema,
 } from '@/lib/notificationTypes';
+import * as logger from '@/lib/logger';
 import { createAuthProvider } from '@/lib/oauth-provider';
 import packageJson from '@/package.json';
 import { McpServer } from '@/types/mcp-server';
@@ -99,6 +100,7 @@ export function useConnection({
     if (!mcpClient) {
       throw new Error('MCP client not connected');
     }
+    logger.log('makeRequest', request);
     try {
       const abortController = new AbortController();
 
@@ -129,10 +131,12 @@ export function useConnection({
         response = await mcpClient.request(request, schema, mcpRequestOptions);
 
         pushHistory(request, response);
+        logger.log('makeRequest response', response);
       } catch (error) {
         const errorMessage =
           error instanceof Error ? error.message : String(error);
         pushHistory(request, { error: errorMessage });
+        logger.error('makeRequest error', error);
         throw error;
       }
 
@@ -207,10 +211,13 @@ export function useConnection({
     }
 
     try {
+      logger.log('sendNotification', notification);
       await mcpClient.notification(notification);
       // Log successful notifications
       pushHistory(notification);
+      logger.log('sendNotification success');
     } catch (e: unknown) {
+      logger.error('sendNotification error', e);
       if (e instanceof McpError) {
         // Log MCP protocol errors
         pushHistory(notification, { error: e.message });
@@ -231,18 +238,20 @@ export function useConnection({
           ? `http://host.docker.internal:12007/health`
           : `http://localhost:12007/health`
       );
+      logger.log('Checking proxy health', proxyHealthUrl.toString());
       const proxyHealthResponse = await fetch(proxyHealthUrl);
       const proxyHealth = await proxyHealthResponse.json();
       if (proxyHealth?.status !== 'ok') {
         throw new Error('MCP Proxy Server is not healthy');
       }
     } catch (e) {
-      console.error("Couldn't connect to MCP Proxy Server", e);
+      logger.error("Couldn't connect to MCP Proxy Server", e);
       throw e;
     }
   };
 
   const handleAuthError = async (error: unknown) => {
+    logger.log('handleAuthError', error);
     if (error instanceof SseError && error.code === 401) {
       sessionStorage.setItem(SESSION_KEYS.SERVER_URL, mcpServer?.url || '');
       sessionStorage.setItem(SESSION_KEYS.MCP_SERVER_UUID, mcpServerUuid);
@@ -270,6 +279,8 @@ export function useConnection({
       return;
     }
 
+    logger.log('Connecting to MCP server', mcpServerUuid);
+
     const client = new Client<Request, Notification, Result>(
       {
         name: 'mcp-inspector',
@@ -287,7 +298,9 @@ export function useConnection({
 
     try {
       await checkProxyHealth();
-    } catch {
+      logger.log('Proxy health check passed');
+    } catch (err) {
+      logger.error('Proxy health check failed', err);
       setConnectionStatus('error-connecting-to-proxy');
       return;
     }
@@ -323,14 +336,15 @@ export function useConnection({
         headers['Authorization'] = `Bearer ${token}`;
       }
 
-      const clientTransport = new SSEClientTransport(mcpProxyServerUrl, {
-        eventSourceInit: {
-          fetch: (url, init) => fetch(url, { ...init, headers }),
-        },
-        requestInit: {
-          headers,
-        },
-      });
+    const clientTransport = new SSEClientTransport(mcpProxyServerUrl, {
+      eventSourceInit: {
+        fetch: (url, init) => fetch(url, { ...init, headers }),
+      },
+      requestInit: {
+        headers,
+      },
+    });
+    logger.log('Connecting via transport', mcpProxyServerUrl.toString());
 
       if (onNotification) {
         [
@@ -359,17 +373,18 @@ export function useConnection({
         );
       }
 
-      try {
-        await client.connect(clientTransport);
-      } catch (error) {
-        console.error(
-          `Failed to connect to MCP Server via the MCP Inspector Proxy: ${mcpProxyServerUrl}:`,
-          error
-        );
-        const shouldRetry = await handleAuthError(error);
-        if (shouldRetry) {
-          return connect(undefined, retryCount + 1);
-        }
+    try {
+      await client.connect(clientTransport);
+      logger.log('Connected to MCP server');
+    } catch (error) {
+      logger.error(
+        `Failed to connect to MCP Server via the MCP Inspector Proxy: ${mcpProxyServerUrl}:`,
+        error
+      );
+      const shouldRetry = await handleAuthError(error);
+      if (shouldRetry) {
+        return connect(undefined, retryCount + 1);
+      }
 
         if (error instanceof SseError && error.code === 401) {
           // Don't set error state if we're about to redirect for auth
@@ -398,13 +413,15 @@ export function useConnection({
 
       setMcpClient(client);
       setConnectionStatus('connected');
+      logger.log('Connection established');
     } catch (e) {
-      console.error(e);
+      logger.error('Connection error', e);
       setConnectionStatus('error');
     }
   };
 
   const disconnect = async () => {
+    logger.log('Disconnecting from MCP server');
     await mcpClient?.close();
     setMcpClient(null);
     setConnectionStatus('disconnected');

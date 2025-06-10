@@ -14,6 +14,7 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import useSWR from 'swr';
+import * as logger from '@/lib/logger';
 
 import {
   createCustomMcpServer,
@@ -190,7 +191,7 @@ export default function CustomMCPServersPage() {
           env[key] = value;
         });
       } catch (e) {
-        console.error('Failed to parse env:', e);
+        logger.error('Failed to parse env:', e);
       }
 
       await createCustomMcpServer(profileUuid, {

@@ -1,5 +1,6 @@
 import { and, eq } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
+import * as logger from '@/lib/logger';
 
 import { db } from '@/db';
 import {
@@ -71,7 +72,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json(newToolExecutionLog[0]);
   } catch (error) {
-    console.error(error);
+    logger.error(error);
     return NextResponse.json(
       { error: 'Failed to create tool execution log' },
       { status: 500 }

@@ -1,5 +1,6 @@
 import { sql } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
+import * as logger from '@/lib/logger';
 
 import { db } from '@/db';
 import { mcpServersTable, toolsTable } from '@/db/schema';
@@ -64,7 +65,7 @@ export async function POST(request: Request) {
           .returning();
       } catch (error: any) {
         // Handle database errors for the batch operation
-        console.error('Database error:', error);
+        logger.error('Database error:', error);
         return NextResponse.json(
           {
             error: 'Failed to process tools request',
@@ -86,7 +87,7 @@ export async function POST(request: Request) {
       successCount: results.length,
     });
   } catch (error) {
-    console.error(error);
+    logger.error(error);
     return NextResponse.json(
       { error: 'Failed to process tools request' },
       { status: 500 }
@@ -124,7 +125,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json({ results });
   } catch (error) {
-    console.error(error);
+    logger.error(error);
     return NextResponse.json(
       { error: 'Failed to fetch tools' },
       { status: 500 }

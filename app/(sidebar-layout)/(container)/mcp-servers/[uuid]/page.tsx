@@ -43,6 +43,7 @@ import { McpServerStatus, McpServerType, ProfileCapability } from '@/db/schema';
 import { useProfiles } from '@/hooks/use-profiles';
 import { useProjects } from '@/hooks/use-projects';
 import { useToast } from '@/hooks/use-toast';
+import * as logger from '@/lib/logger';
 import { useConnection } from '@/hooks/useConnection';
 import { ConnectionStatus } from '@/lib/constants';
 import { McpServer } from '@/types/mcp-server';
@@ -64,6 +65,7 @@ export default function McpServerDetailPage({
   const { toast } = useToast();
   const [notifications, setNotifications] = useState<any[]>([]);
   const [connectionError, setConnectionError] = useState<string | null>(null);
+  const [connectionErrorDetails, setConnectionErrorDetails] = useState<string | null>(null);
   const connectionAttemptedRef = useRef(false);
 
   const hasToolsManagement = currentProfile?.enabled_capabilities?.includes(ProfileCapability.TOOLS_MANAGEMENT);
@@ -106,12 +108,16 @@ export default function McpServerDetailPage({
 
   const handleConnect = useCallback(async () => {
     setConnectionError(null);
+    setConnectionErrorDetails(null);
     try {
       await connect();
     } catch (error) {
-      console.error("Connection error:", error);
+      logger.error("Connection error:", error);
       const errorMessage = error instanceof Error ? error.message : "Failed to connect to the MCP server";
       setConnectionError(errorMessage);
+      if (error instanceof Error && error.stack) {
+        setConnectionErrorDetails(error.stack);
+      }
       toast({
         title: "Connection Error",
         description: errorMessage,
@@ -125,8 +131,9 @@ export default function McpServerDetailPage({
       await disconnect();
       clearNotifications();
       setConnectionError(null);
+      setConnectionErrorDetails(null);
     } catch (error) {
-      console.error("Disconnection error:", error);
+      logger.error("Disconnection error:", error);
       toast({
         title: "Disconnection Error",
         description: error instanceof Error ? error.message : "Failed to disconnect from the MCP server",
@@ -480,8 +487,25 @@ export default function McpServerDetailPage({
         </div>
       </div>
 
+      {(connectionStatus === 'error' || connectionStatus === 'error-connecting-to-proxy') && connectionError && (
+        <Card className="mb-8">
+          <CardHeader>
+            <CardTitle className="text-2xl font-bold">Connection Error Details</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p>{connectionError}</p>
+            {connectionErrorDetails && (
+              <details className="whitespace-pre-wrap">
+                <summary className="cursor-pointer">Stack Trace</summary>
+                <pre className="mt-2 text-sm overflow-x-auto">{connectionErrorDetails}</pre>
+              </details>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       {/* Connection Error Alert */}
-      {connectionError && connectionStatus !== 'connected' && (
+      {connectionError && (connectionStatus === 'error' || connectionStatus === 'error-connecting-to-proxy') && (
         <div className="bg-red-50 border border-red-200 text-red-800 rounded-md p-4 mb-6">
           <div className="flex">
             <div className="flex-shrink-0">

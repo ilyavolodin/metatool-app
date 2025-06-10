@@ -1,5 +1,6 @@
 import { eq } from 'drizzle-orm';
 import { NextRequest, NextResponse } from 'next/server';
+import * as logger from '@/lib/logger';
 
 import { db } from '@/db';
 import { toolExecutionLogsTable } from '@/db/schema';
@@ -59,7 +60,7 @@ export async function PUT(
 
     return NextResponse.json(updatedLog[0]);
   } catch (error) {
-    console.error(error);
+    logger.error(error);
     return NextResponse.json(
       { error: 'Failed to update tool execution log' },
       { status: 500 }
