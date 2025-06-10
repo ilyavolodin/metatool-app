@@ -1,9 +1,9 @@
 import { sql } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
-import * as logger from '@/lib/logger';
 
 import { db } from '@/db';
 import { mcpServersTable, toolsTable } from '@/db/schema';
+import * as logger from '@/lib/logger';
 
 import { authenticateApiKey } from '../auth';
 

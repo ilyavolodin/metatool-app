@@ -4,9 +4,9 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense } from 'react';
 import { useEffect, useState } from 'react';
 import useSWR from 'swr';
-import * as logger from '@/lib/logger';
 
 import { Input } from '@/components/ui/input';
+import * as logger from '@/lib/logger';
 import type { PaginatedSearchResult } from '@/types/search';
 
 import CardGrid from './components/CardGrid';

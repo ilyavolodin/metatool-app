@@ -1,9 +1,9 @@
 import { eq } from 'drizzle-orm';
 import { NextRequest, NextResponse } from 'next/server';
-import * as logger from '@/lib/logger';
 
 import { db } from '@/db';
 import { toolExecutionLogsTable } from '@/db/schema';
+import * as logger from '@/lib/logger';
 
 import { authenticateApiKey } from '../../auth';
 

@@ -1,6 +1,5 @@
 import { and, eq } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
-import * as logger from '@/lib/logger';
 
 import { db } from '@/db';
 import {
@@ -8,6 +7,7 @@ import {
   McpServerStatus,
   oauthSessionsTable,
 } from '@/db/schema';
+import * as logger from '@/lib/logger';
 
 import { authenticateApiKey } from '../auth';
 
