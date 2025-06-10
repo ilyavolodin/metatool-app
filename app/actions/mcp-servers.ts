@@ -51,14 +51,21 @@ export async function deleteMcpServerByUuid(
   profileUuid: string,
   uuid: string
 ): Promise<void> {
-  await db
-    .delete(mcpServersTable)
-    .where(
-      and(
-        eq(mcpServersTable.uuid, uuid),
-        eq(mcpServersTable.profile_uuid, profileUuid)
-      )
-    );
+  console.log(`Deleting MCP server ${uuid}`);
+  try {
+    await db
+      .delete(mcpServersTable)
+      .where(
+        and(
+          eq(mcpServersTable.uuid, uuid),
+          eq(mcpServersTable.profile_uuid, profileUuid)
+        )
+      );
+    console.log(`Deleted MCP server ${uuid}`);
+  } catch (error) {
+    console.error(`Failed to delete MCP server ${uuid}:`, error);
+    throw error;
+  }
 }
 
 export async function toggleMcpServerStatus(
@@ -66,15 +73,22 @@ export async function toggleMcpServerStatus(
   uuid: string,
   newStatus: McpServerStatus
 ): Promise<void> {
-  await db
-    .update(mcpServersTable)
-    .set({ status: newStatus })
-    .where(
-      and(
-        eq(mcpServersTable.uuid, uuid),
-        eq(mcpServersTable.profile_uuid, profileUuid)
-      )
-    );
+  console.log(`Updating MCP server ${uuid} status -> ${newStatus}`);
+  try {
+    await db
+      .update(mcpServersTable)
+      .set({ status: newStatus })
+      .where(
+        and(
+          eq(mcpServersTable.uuid, uuid),
+          eq(mcpServersTable.profile_uuid, profileUuid)
+        )
+      );
+    console.log(`Updated MCP server ${uuid} status`);
+  } catch (error) {
+    console.error(`Failed to update status for ${uuid}:`, error);
+    throw error;
+  }
 }
 
 export async function updateMcpServer(
@@ -90,17 +104,24 @@ export async function updateMcpServer(
     type?: McpServerType;
   }
 ): Promise<void> {
-  await db
-    .update(mcpServersTable)
-    .set({
-      ...data,
-    })
-    .where(
-      and(
-        eq(mcpServersTable.uuid, uuid),
-        eq(mcpServersTable.profile_uuid, profileUuid)
-      )
-    );
+  console.log(`Updating MCP server ${uuid}`);
+  try {
+    await db
+      .update(mcpServersTable)
+      .set({
+        ...data,
+      })
+      .where(
+        and(
+          eq(mcpServersTable.uuid, uuid),
+          eq(mcpServersTable.profile_uuid, profileUuid)
+        )
+      );
+    console.log(`Updated MCP server ${uuid}`);
+  } catch (error) {
+    console.error(`Failed to update MCP server ${uuid}:`, error);
+    throw error;
+  }
 }
 
 export async function createMcpServer(
@@ -116,15 +137,22 @@ export async function createMcpServer(
     type?: McpServerType;
   }
 ): Promise<McpServer> {
-  const [server] = await db
-    .insert(mcpServersTable)
-    .values({
-      ...data,
-      profile_uuid: profileUuid,
-    })
-    .returning();
+  console.log('Creating MCP server', data.name);
+  try {
+    const [server] = await db
+      .insert(mcpServersTable)
+      .values({
+        ...data,
+        profile_uuid: profileUuid,
+      })
+      .returning();
 
-  return server as McpServer;
+    console.log('Created MCP server', server.uuid);
+    return server as McpServer;
+  } catch (error) {
+    console.error('Failed to create MCP server:', error);
+    throw error;
+  }
 }
 
 export async function bulkImportMcpServers(
@@ -150,6 +178,7 @@ export async function bulkImportMcpServers(
 
   const serverEntries = Object.entries(mcpServers);
 
+  console.log(`Bulk importing ${serverEntries.length} MCP servers`);
   for (const [name, serverConfig] of serverEntries) {
     const serverData = {
       name,
@@ -164,7 +193,13 @@ export async function bulkImportMcpServers(
     };
 
     // Insert the server into the database
-    await db.insert(mcpServersTable).values(serverData);
+    try {
+      await db.insert(mcpServersTable).values(serverData);
+      console.log(`Imported MCP server ${name}`);
+    } catch (error) {
+      console.error(`Failed to import MCP server ${name}:`, error);
+      throw error;
+    }
   }
 
   return { success: true, count: serverEntries.length };

@@ -22,7 +22,9 @@ export default function mcpProxy({
     if (message && typeof message === 'object' && 'method' in message) {
       const method = String((message as any).method).toLowerCase();
       if (method.includes('tool')) {
-        console.log(`[${direction}] ${method}`);
+        console.log(
+          `[${direction}] ${method} id=${(message as any).id ?? 'n/a'}`
+        );
       }
     }
   }
@@ -38,6 +40,7 @@ export default function mcpProxy({
   };
 
   transportToClient.onclose = () => {
+    console.log('Client transport closed');
     if (transportToServerClosed) {
       return;
     }
@@ -47,6 +50,7 @@ export default function mcpProxy({
   };
 
   transportToServer.onclose = () => {
+    console.log('Server transport closed');
     if (transportToClientClosed) {
       return;
     }
