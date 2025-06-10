@@ -52,21 +52,35 @@ Then open http://localhost:12005 in your browser to open MetaMCP App.
 It is recommended to have npx (node.js based mcp) and uvx (python based mcp) installed globally.
 To install uv check: https://docs.astral.sh/uv/getting-started/installation/
 
-### Default Remote Mode SSE endpoint for MetaMCP
+### Default Remote Mode Streaming HTTP endpoint for MetaMCP
 
-The recommended way to connect to MetaMCP is via the SSE endpoint:
+The recommended way to connect to MetaMCP is via the streaming HTTP endpoint:
 
 ```
-http://localhost:12007/sse with Authorization: Bearer <your-api-key>
+http://localhost:12007/mcp with Authorization: Bearer <your-api-key>
 ```
 
 Alternatively, if you cannot set headers, you can use this URL-based endpoint:
 
 ```
-http://localhost:12007/api-key/<your-api-key>/sse
+http://localhost:12007/api-key/<your-api-key>/mcp
 ```
 
 You can get the API key from the MetaMCP App's API Keys page.
+
+### Legacy SSE endpoint
+
+The SSE protocol is still available for backwards compatibility:
+
+```
+http://localhost:12007/sse with Authorization: Bearer <your-api-key>
+```
+
+or
+
+```
+http://localhost:12007/api-key/<your-api-key>/sse
+```
 
 ### For Local Access
 

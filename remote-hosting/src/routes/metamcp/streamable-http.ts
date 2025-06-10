@@ -95,6 +95,20 @@ export const handleMetaMcpPost = async (req: express.Request, res: express.Respo
 
       await webAppTransport.start();
 
+      webAppTransport.onclose = async () => {
+        const id = webAppTransport.sessionId;
+        console.log(`Connection closed for session ${id}`);
+        const conn = metaMcpConnections.get(id || '');
+        if (conn?.backingServerTransport) {
+          try {
+            await conn.backingServerTransport.close();
+          } catch (err) {
+            console.error('Error closing backing transport:', err);
+          }
+        }
+        metaMcpConnections.delete(id || '');
+      };
+
       if (backingServerTransport instanceof StdioClientTransport && backingServerTransport.stderr) {
         backingServerTransport.stderr.on('data', (chunk) => {
           webAppTransport.send({
