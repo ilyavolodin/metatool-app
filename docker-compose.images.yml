@@ -5,8 +5,7 @@ services:
     env_file:
       - .env
     restart: always
-    ports:
-      - '12005:3000'
+    # Expose ports only through nginx
     environment:
       - NODE_ENV=production
     depends_on:
@@ -20,8 +19,7 @@ services:
     env_file:
       - .env
     restart: always
-    ports:
-      - '12007:12007'
+    # Expose ports only through nginx
     environment:
       - NODE_ENV=production
     extra_hosts:
@@ -53,6 +51,17 @@ services:
     depends_on:
       metatool-postgres:
         condition: service_healthy
+
+  nginx:
+    container_name: metatool-nginx
+    build:
+      context: ./nginx
+      dockerfile: Dockerfile
+    ports:
+      - "12005:12005"
+    depends_on:
+      - metatool-web
+      - metatool-remote-hosting
 
 
 volumes:

@@ -233,10 +233,8 @@ export function useConnection({
 
   const checkProxyHealth = async () => {
     try {
-      const proxyHealthUrl = new URL(
-        process.env.USE_DOCKER_HOST === 'true'
-          ? 'http://host.docker.internal:12007/health'
-          : 'http://localhost:12007/health'
+    const proxyHealthUrl = new URL(
+        `${process.env.NEXT_PUBLIC_REMOTE_HOSTING_URL || 'http://localhost:12005/host'}/health`
       );
       logger.log('Checking proxy health', proxyHealthUrl.toString());
       const proxyHealthResponse = await fetch(proxyHealthUrl);
@@ -305,10 +303,8 @@ export function useConnection({
       return;
     }
     const mcpProxyServerUrl = new URL(
-      process.env.USE_DOCKER_HOST === 'true'
-        ? `http://host.docker.internal:12007/server/${mcpServerUuid}/sse`
-        : `http://localhost:12007/server/${mcpServerUuid}/sse`
-    );
+        `${process.env.NEXT_PUBLIC_REMOTE_HOSTING_URL || 'http://localhost:12005/host'}/server/${mcpServerUuid}/sse`
+      );
     mcpProxyServerUrl.searchParams.append(
       'transportType',
       mcpServer.type.toLowerCase()

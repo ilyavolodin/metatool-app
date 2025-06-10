@@ -18,8 +18,8 @@ export default function InspectorGuidePage() {
 
   const inspectorCommand = `npx -y @modelcontextprotocol/inspector npx -y @metamcp/mcp-server-metamcp@latest -e METAMCP_API_KEY=${apiKey?.api_key || '<YOUR_API_KEY>'} -e METAMCP_API_BASE_URL=http://localhost:12005`;
 
-  const sseEndpoint = `http://localhost:12007/sse with Authorization: Bearer ${apiKey?.api_key || '<YOUR_API_KEY>'}`;
-  const urlBasedSseEndpoint = `http://localhost:12007/api-key/${apiKey?.api_key || '<YOUR_API_KEY>'}/sse`;
+  const sseEndpoint = `http://localhost:12005/host/sse with Authorization: Bearer ${apiKey?.api_key || '<YOUR_API_KEY>'}`;
+  const urlBasedSseEndpoint = `http://localhost:12005/host/api-key/${apiKey?.api_key || '<YOUR_API_KEY>'}/sse`;
 
   return (
     <div className='container mx-auto py-6 flex flex-col items-start justify-center gap-6'>
