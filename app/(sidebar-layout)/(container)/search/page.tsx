@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense } from 'react';
 import { useEffect, useState } from 'react';
 import useSWR from 'swr';
+import * as logger from '@/lib/logger';
 
 import { Input } from '@/components/ui/input';
 import type { PaginatedSearchResult } from '@/types/search';
@@ -34,8 +35,8 @@ function SearchContent() {
     }
   );
 
-  if (error) console.error('Search error:', error);
-  console.log('Search data:', data);
+  if (error) logger.error('Search error:', error);
+  logger.log('Search data:', data);
 
   useEffect(() => {
     const timer = setTimeout(() => {

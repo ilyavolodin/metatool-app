@@ -1,5 +1,6 @@
 import { and, desc, eq, or } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
+import * as logger from '@/lib/logger';
 
 import { db } from '@/db';
 import {
@@ -47,7 +48,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json(customMcpServers);
   } catch (error) {
-    console.error(error);
+    logger.error(error);
     return NextResponse.json(
       { error: 'Failed to fetch custom MCP servers' },
       { status: 500 }
@@ -78,7 +79,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json(newCustomMcpServer);
   } catch (error) {
-    console.error(error);
+    logger.error(error);
     return NextResponse.json(
       { error: 'Failed to create custom MCP server' },
       { status: 500 }

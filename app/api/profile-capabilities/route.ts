@@ -1,5 +1,6 @@
 import { eq } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
+import * as logger from '@/lib/logger';
 
 import { db } from '@/db';
 import { profilesTable } from '@/db/schema';
@@ -27,7 +28,7 @@ export async function GET(request: Request) {
       profileCapabilities: profile[0].enabled_capabilities,
     });
   } catch (error) {
-    console.error(error);
+    logger.error(error);
     return NextResponse.json(
       { error: 'Failed to fetch profile capabilities' },
       { status: 500 }

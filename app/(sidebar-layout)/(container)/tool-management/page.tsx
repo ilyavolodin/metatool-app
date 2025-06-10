@@ -37,6 +37,7 @@ import { useProfiles } from '@/hooks/use-profiles';
 import { useProjects } from '@/hooks/use-projects';
 import { useToast } from '@/hooks/use-toast';
 import { useConnectionMulti } from '@/hooks/useConnectionMulti';
+import * as logger from '@/lib/logger';
 
 export default function ToolsManagementPage() {
     const { currentProfile, mutateActiveProfile } = useProfiles();
@@ -151,7 +152,7 @@ export default function ToolsManagementPage() {
                 globalMutate(['getToolsByMcpServerUuid', serverUuid]);
             }
         } catch (error) {
-            console.error("Error refreshing SSE tools:", error);
+            logger.error("Error refreshing SSE tools:", error);
             toast({
                 variant: "destructive",
                 title: "Error refreshing tools",
@@ -162,7 +163,7 @@ export default function ToolsManagementPage() {
             try {
                 await disconnect(serverUuid);
             } catch (disconnectError) {
-                console.error("Error disconnecting:", disconnectError);
+                logger.error("Error disconnecting:", disconnectError);
             }
 
             // Mark this server as no longer refreshing

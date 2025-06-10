@@ -47,6 +47,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { McpServerStatus, McpServerType } from '@/db/schema';
 import { useProfiles } from '@/hooks/use-profiles';
 import { useToast } from '@/hooks/use-toast';
+import * as logger from '@/lib/logger';
 import { McpServer } from '@/types/mcp-server';
 
 const columnHelper = createColumnHelper<McpServer>();
@@ -224,7 +225,7 @@ export default function MCPServersPage() {
         setTimeout(() => setCopiedToClipboard(false), 2000);
       },
       (err) => {
-        console.error('Could not copy text: ', err);
+        logger.error('Could not copy text: ', err);
         toast({
           title: 'Copy Failed',
           description: 'Failed to copy to clipboard.',
@@ -412,7 +413,7 @@ export default function MCPServersPage() {
                           variant: 'default',
                         });
                       } catch (error) {
-                        console.error('Error importing MCP servers:', error);
+                        logger.error('Error importing MCP servers:', error);
                         setImportError(
                           'Failed to import servers. Check the console for details.'
                         );
@@ -543,7 +544,7 @@ export default function MCPServersPage() {
                             router.push(`/mcp-servers/${newServer.uuid}`);
                           }
                         } catch (error) {
-                          console.error('Error creating MCP server:', error);
+                          logger.error('Error creating MCP server:', error);
                         } finally {
                           setIsSubmitting(false);
                         }
@@ -683,7 +684,7 @@ export default function MCPServersPage() {
                             router.push(`/mcp-servers/${newServer.uuid}`);
                           }
                         } catch (error) {
-                          console.error('Error creating MCP server:', error);
+                          logger.error('Error creating MCP server:', error);
                         } finally {
                           setIsSubmitting(false);
                         }
@@ -790,7 +791,7 @@ export default function MCPServersPage() {
                             router.push(`/mcp-servers/${newServer.uuid}`);
                           }
                         } catch (error) {
-                          console.error('Error creating MCP server:', error);
+                          logger.error('Error creating MCP server:', error);
                         } finally {
                           setIsSubmitting(false);
                         }

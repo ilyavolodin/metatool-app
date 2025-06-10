@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { McpServerType, WorkspaceMode } from "@/db/schema";
 import { useProfiles } from "@/hooks/use-profiles";
 import { useToast } from "@/hooks/use-toast";
+import * as logger from "@/lib/logger";
 
 import ToolsList from "./ToolsList";
 
@@ -167,7 +168,7 @@ export default function ToolManagement({ mcpServer, hasToolsManagement, apiKey, 
                                 });
                             }
                         } catch (error) {
-                            console.error("Error refreshing tools:", error);
+                            logger.error("Error refreshing tools:", error);
                             toast({
                                 variant: "destructive",
                                 title: "Error refreshing tools",
