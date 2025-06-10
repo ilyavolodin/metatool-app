@@ -178,9 +178,10 @@ export const createMetaMcpTransport = async (apiKey: string): Promise<Transport>
     ...defaultEnvironment,
     METAMCP_API_KEY: apiKey,
     METAMCP_API_BASE_URL:
-      process.env.USE_DOCKER_HOST === 'true'
+      process.env.METAMCP_API_BASE_URL ||
+      (process.env.USE_DOCKER_HOST === 'true'
         ? 'http://host.docker.internal:12005'
-        : 'http://localhost:12005',
+        : 'http://localhost:12005'),
     USE_DOCKER_HOST: process.env.USE_DOCKER_HOST,
   };
 

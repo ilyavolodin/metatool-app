@@ -65,7 +65,7 @@ export default function SetupGuidePage() {
           <div className='relative mb-6'>
             <button
               onClick={() => {
-                const endpoint = `http://localhost:12007/sse with Authorization: Bearer ${apiKey?.api_key ?? '<create an api key first>'}`;
+                const endpoint = `http://localhost:12005/host/sse with Authorization: Bearer ${apiKey?.api_key ?? '<create an api key first>'}`;
                 navigator.clipboard.writeText(endpoint);
                 toast({
                   description: 'API endpoint copied to clipboard',
@@ -77,7 +77,7 @@ export default function SetupGuidePage() {
             </button>
             <Highlight
               theme={themes.github}
-              code={`http://localhost:12007/sse with Authorization: Bearer ${apiKey?.api_key ?? '<create an api key first>'}`}
+              code={`http://localhost:12005/host/sse with Authorization: Bearer ${apiKey?.api_key ?? '<create an api key first>'}`}
               language='bash'>
               {({ tokens, getLineProps, getTokenProps }) => (
                 <pre className='bg-[#f6f8fa] text-[#24292f] p-4 rounded-md overflow-x-auto'>
@@ -100,7 +100,7 @@ export default function SetupGuidePage() {
           <div className='relative'>
             <button
               onClick={() => {
-                const endpoint = `http://localhost:12007/api-key/${apiKey?.api_key ?? '<create an api key first>'}/sse`;
+                const endpoint = `http://localhost:12005/host/api-key/${apiKey?.api_key ?? '<create an api key first>'}/sse`;
                 navigator.clipboard.writeText(endpoint);
                 toast({
                   description: 'URL-based API endpoint copied to clipboard',
@@ -112,7 +112,7 @@ export default function SetupGuidePage() {
             </button>
             <Highlight
               theme={themes.github}
-              code={`http://localhost:12007/api-key/${apiKey?.api_key ?? '<create an api key first>'}/sse`}
+              code={`http://localhost:12005/host/api-key/${apiKey?.api_key ?? '<create an api key first>'}/sse`}
               language='bash'>
               {({ tokens, getLineProps, getTokenProps }) => (
                 <pre className='bg-[#f6f8fa] text-[#24292f] p-4 rounded-md overflow-x-auto'>

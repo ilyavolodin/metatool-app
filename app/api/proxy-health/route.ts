@@ -4,9 +4,7 @@ import * as logger from '@/lib/logger';
 
 export async function GET() {
   try {
-    const proxyHealthUrl = process.env.USE_DOCKER_HOST === 'true'
-      ? 'http://host.docker.internal:12007/health'
-      : 'http://localhost:12007/health';
+    const proxyHealthUrl = `${process.env.REMOTE_HOSTING_URL || 'http://localhost:12005/host'}/health`;
 
     const response = await fetch(proxyHealthUrl);
     const json = await response.json();

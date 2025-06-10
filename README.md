@@ -57,13 +57,13 @@ To install uv check: https://docs.astral.sh/uv/getting-started/installation/
 The recommended way to connect to MetaMCP is via the streaming HTTP endpoint:
 
 ```
-http://localhost:12007/mcp with Authorization: Bearer <your-api-key>
+http://localhost:12005/host/mcp with Authorization: Bearer <your-api-key>
 ```
 
 Alternatively, if you cannot set headers, you can use this URL-based endpoint:
 
 ```
-http://localhost:12007/api-key/<your-api-key>/mcp
+http://localhost:12005/host/api-key/<your-api-key>/mcp
 ```
 
 You can get the API key from the MetaMCP App's API Keys page.
@@ -73,13 +73,13 @@ You can get the API key from the MetaMCP App's API Keys page.
 The SSE protocol is still available for backwards compatibility:
 
 ```
-http://localhost:12007/sse with Authorization: Bearer <your-api-key>
+http://localhost:12005/host/sse with Authorization: Bearer <your-api-key>
 ```
 
 or
 
 ```
-http://localhost:12007/api-key/<your-api-key>/sse
+http://localhost:12005/host/api-key/<your-api-key>/sse
 ```
 
 ### For Local Access
