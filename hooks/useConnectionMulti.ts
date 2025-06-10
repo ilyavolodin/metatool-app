@@ -60,7 +60,11 @@ export function useConnectionMulti({
   // Utility function to check if the MCP proxy is healthy
   const checkProxyHealth = async () => {
     try {
-      const proxyHealthUrl = '/api/proxy-health';
+      const proxyHealthUrl = new URL(
+        process.env.USE_DOCKER_HOST === 'true'
+          ? 'http://host.docker.internal:12007/health'
+          : 'http://localhost:12007/health'
+      );
       const proxyHealthResponse = await fetch(proxyHealthUrl);
       const proxyHealth = await proxyHealthResponse.json();
       if (proxyHealth?.status !== 'ok') {
