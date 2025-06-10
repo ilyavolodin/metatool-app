@@ -60,11 +60,12 @@ export function useConnectionMulti({
   // Utility function to check if the MCP proxy is healthy
   const checkProxyHealth = async () => {
     try {
-      const proxyHealthUrl = new URL(
-        process.env.USE_DOCKER_HOST === 'true'
-          ? `http://host.docker.internal:12007/health`
-          : `http://localhost:12007/health`
-      );
+      const baseUrl =
+        process.env.NEXT_PUBLIC_MCP_PROXY_URL ||
+        (process.env.USE_DOCKER_HOST === 'true'
+          ? 'http://host.docker.internal:12007'
+          : 'http://localhost:12007');
+      const proxyHealthUrl = `${baseUrl}/health`;
       const proxyHealthResponse = await fetch(proxyHealthUrl);
       const proxyHealth = await proxyHealthResponse.json();
       if (proxyHealth?.status !== 'ok') {
@@ -159,10 +160,13 @@ export function useConnectionMulti({
     }
 
     // Create proxy URL
+    const baseUrl =
+      process.env.NEXT_PUBLIC_MCP_PROXY_URL ||
+      (process.env.USE_DOCKER_HOST === 'true'
+        ? 'http://host.docker.internal:12007'
+        : 'http://localhost:12007');
     const mcpProxyServerUrl = new URL(
-      process.env.USE_DOCKER_HOST === 'true'
-        ? `http://host.docker.internal:12007/server/${serverUuid}/sse`
-        : `http://localhost:12007/server/${serverUuid}/sse`
+      `${baseUrl}/server/${serverUuid}/sse`
     );
     mcpProxyServerUrl.searchParams.append(
       'transportType',

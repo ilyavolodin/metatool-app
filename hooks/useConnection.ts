@@ -233,12 +233,13 @@ export function useConnection({
 
   const checkProxyHealth = async () => {
     try {
-      const proxyHealthUrl = new URL(
-        process.env.USE_DOCKER_HOST === 'true'
-          ? `http://host.docker.internal:12007/health`
-          : `http://localhost:12007/health`
-      );
-      logger.log('Checking proxy health', proxyHealthUrl.toString());
+      const baseUrl =
+        process.env.NEXT_PUBLIC_MCP_PROXY_URL ||
+        (process.env.USE_DOCKER_HOST === 'true'
+          ? 'http://host.docker.internal:12007'
+          : 'http://localhost:12007');
+      const proxyHealthUrl = `${baseUrl}/health`;
+      logger.log('Checking proxy health via', proxyHealthUrl);
       const proxyHealthResponse = await fetch(proxyHealthUrl);
       const proxyHealth = await proxyHealthResponse.json();
       if (proxyHealth?.status !== 'ok') {
@@ -304,10 +305,13 @@ export function useConnection({
       setConnectionStatus('error-connecting-to-proxy');
       return;
     }
+    const baseUrl =
+      process.env.NEXT_PUBLIC_MCP_PROXY_URL ||
+      (process.env.USE_DOCKER_HOST === 'true'
+        ? 'http://host.docker.internal:12007'
+        : 'http://localhost:12007');
     const mcpProxyServerUrl = new URL(
-      process.env.USE_DOCKER_HOST === 'true'
-        ? `http://host.docker.internal:12007/server/${mcpServerUuid}/sse`
-        : `http://localhost:12007/server/${mcpServerUuid}/sse`
+      `${baseUrl}/server/${mcpServerUuid}/sse`
     );
     mcpProxyServerUrl.searchParams.append(
       'transportType',
