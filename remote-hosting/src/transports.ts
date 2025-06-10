@@ -46,7 +46,17 @@ export const createTransport = async (req: express.Request): Promise<Transport> 
       stderr: 'pipe',
     });
 
-    await transport.start();
+    console.log(`Starting MCP server process: ${cmd} ${args.join(' ')}`);
+    try {
+      await transport.start();
+      console.log(`MCP server started: ${cmd} ${args.join(' ')}`);
+    } catch (error) {
+      console.error(
+        `Failed to start MCP server process: ${cmd} ${args.join(' ')}`,
+        error
+      );
+      throw error;
+    }
 
     // Handle stderr output - pipe to console without blocking
     if (transport.stderr) {
@@ -174,7 +184,17 @@ export const createMetaMcpTransport = async (apiKey: string): Promise<Transport>
     stderr: 'pipe',
   });
 
-  await transport.start();
+  console.log(`Starting MetaMCP server process: ${cmd} ${args.join(' ')}`);
+  try {
+    await transport.start();
+    console.log(`MetaMCP server started: ${cmd} ${args.join(' ')}`);
+  } catch (error) {
+    console.error(
+      `Failed to start MetaMCP server process: ${cmd} ${args.join(' ')}`,
+      error
+    );
+    throw error;
+  }
 
   // Handle stderr output - pipe to console without blocking
   if (transport.stderr) {
