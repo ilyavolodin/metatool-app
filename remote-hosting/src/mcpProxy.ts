@@ -18,11 +18,22 @@ export default function mcpProxy({
   let transportToClientClosed = false;
   let transportToServerClosed = false;
 
+  function logMessage(direction: string, message: any) {
+    if (message && typeof message === 'object' && 'method' in message) {
+      const method = String((message as any).method).toLowerCase();
+      if (method.includes('tool')) {
+        console.log(`[${direction}] ${method}`);
+      }
+    }
+  }
+
   transportToClient.onmessage = (message) => {
+    logMessage('client->server', message);
     transportToServer.send(message).catch(onServerError);
   };
 
   transportToServer.onmessage = (message) => {
+    logMessage('server->client', message);
     transportToClient.send(message).catch(onClientError);
   };
 
