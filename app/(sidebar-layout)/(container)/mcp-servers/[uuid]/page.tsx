@@ -1,11 +1,12 @@
 'use client';
 
+import { ListToolsResultSchema } from '@modelcontextprotocol/sdk/types.js';
 import { ArrowLeft, Pencil, PlayCircle, StopCircle, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { use } from 'react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
-import useSWR from 'swr';
+import useSWR, { useSWRConfig } from 'swr';
 
 import { getFirstApiKey } from '@/app/actions/api-keys';
 import {
@@ -14,6 +15,7 @@ import {
   toggleMcpServerStatus,
   updateMcpServer,
 } from '@/app/actions/mcp-servers';
+import { saveToolsToDatabase } from '@/app/actions/tools';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -48,8 +50,8 @@ import { ConnectionStatus } from '@/lib/constants';
 import * as logger from '@/lib/logger';
 import { McpServer } from '@/types/mcp-server';
 
-import ServerNotifications from "./ServerNotifications";
-import ToolManagement from "./ToolManagement";
+import ServerNotifications from './ServerNotifications';
+import ToolManagement from './ToolManagement';
 
 
 export default function McpServerDetailPage({
@@ -85,6 +87,9 @@ export default function McpServerDetailPage({
     currentProject?.uuid ? `${currentProject?.uuid}/api-keys/getFirst` : null,
     () => getFirstApiKey(currentProject?.uuid || '')
   );
+
+  const { mutate: globalMutate } = useSWRConfig();
+  const [toolsRefreshed, setToolsRefreshed] = useState(false);
 
   const handleNotification = (notification: any) => {
     setNotifications((prev) => [...prev, notification]);
@@ -181,6 +186,34 @@ export default function McpServerDetailPage({
     }
   }, [mcpServer, connectionStatus, handleConnect]);
 
+  useEffect(() => {
+    if (connectionStatus === 'connected' && !toolsRefreshed && mcpServer) {
+      (async () => {
+        try {
+          const response = await makeRequest(
+            { method: 'tools/list', params: {} },
+            ListToolsResultSchema,
+            { suppressToast: true }
+          );
+          if (response.tools.length > 0) {
+            await saveToolsToDatabase(mcpServer.uuid, response.tools);
+            globalMutate(['getToolsByMcpServerUuid', mcpServer.uuid]);
+          }
+        } catch (err) {
+          logger.error('Failed to auto-refresh tools', err);
+        } finally {
+          setToolsRefreshed(true);
+        }
+      })();
+    }
+  }, [connectionStatus, toolsRefreshed, makeRequest, mcpServer, globalMutate]);
+
+  useEffect(() => {
+    return () => {
+      disconnect();
+    };
+  }, [disconnect]);
+
   const onSubmit = async (data: {
     name: string;
     description: string;
@@ -236,6 +269,8 @@ export default function McpServerDetailPage({
     switch (status) {
       case 'connected':
         return 'Connected';
+      case 'starting':
+        return 'Starting...';
       case 'connecting':
         return 'Connecting...';
       case 'disconnected':
@@ -253,6 +288,8 @@ export default function McpServerDetailPage({
     switch (status) {
       case 'connected':
         return 'text-green-500';
+      case 'starting':
+        return 'text-yellow-500';
       case 'connecting':
         return 'text-yellow-500';
       case 'disconnected':
@@ -302,12 +339,12 @@ export default function McpServerDetailPage({
               variant='outline'
               onClick={handleConnect}
               className='flex items-center'
-              disabled={connectionStatus === 'connecting'}
+              disabled={connectionStatus === 'connecting' || connectionStatus === 'starting'}
             >
-              {connectionStatus === 'connecting' ? (
+              {connectionStatus === 'connecting' || connectionStatus === 'starting' ? (
                 <>
                   <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"></div>
-                  Connecting...
+                  {connectionStatus === 'starting' ? 'Starting...' : 'Connecting...'}
                 </>
               ) : (
                 <>

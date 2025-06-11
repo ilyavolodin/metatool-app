@@ -273,6 +273,10 @@ export function useConnection({
       return;
     }
 
+    setConnectionStatus(
+      mcpServer.type === McpServerType.STDIO ? 'starting' : 'connecting'
+    );
+
     logger.log('Connecting to MCP server', mcpServerUuid);
 
     const client = new Client<Request, Notification, Result>(
