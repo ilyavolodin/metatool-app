@@ -187,7 +187,7 @@ export default function McpServerDetailPage({
   }, [mcpServer, connectionStatus, handleConnect]);
 
   useEffect(() => {
-    if (connectionStatus === 'connected' && !toolsRefreshed) {
+    if (connectionStatus === 'connected' && !toolsRefreshed && mcpServer) {
       (async () => {
         try {
           const response = await makeRequest(
@@ -206,7 +206,7 @@ export default function McpServerDetailPage({
         }
       })();
     }
-  }, [connectionStatus, toolsRefreshed, makeRequest, mcpServer.uuid, globalMutate]);
+  }, [connectionStatus, toolsRefreshed, makeRequest, mcpServer, globalMutate]);
 
   useEffect(() => {
     return () => {
