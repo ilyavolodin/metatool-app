@@ -8,7 +8,7 @@ import {
     useReactTable,
 } from '@tanstack/react-table';
 import { Copy, RefreshCw } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import useSWR, { useSWRConfig } from 'swr';
 
 import { getFirstApiKey } from '@/app/actions/api-keys';
@@ -73,6 +73,7 @@ export default function ToolsManagementPage() {
         }
     }, [mcpServers]);
 
+
     const allToolsData = useSWR(
         mcpServers && mcpServers.length > 0 ? ['allTools', mcpServers.map(s => s.uuid)] : null,
         async () => {
@@ -88,9 +89,15 @@ export default function ToolsManagementPage() {
     const globalEnabledTools = allToolsData.data?.filter(tool => tool.status === ToggleStatus.ACTIVE).length || 0;
 
     // Function to refresh global tools data
-    const refreshGlobalTools = () => {
+    const refreshGlobalTools = useCallback(() => {
         allToolsData.mutate();
-    };
+    }, [allToolsData]);
+
+    useEffect(() => {
+        if (mcpServers) {
+            refreshGlobalTools();
+        }
+    }, [mcpServers, refreshGlobalTools]);
 
     const toggleServerExpansion = (serverUuid: string) => {
         const newExpanded = new Set(expandedServers);
@@ -139,6 +146,7 @@ export default function ToolsManagementPage() {
 
                 // Refresh the UI by mutating the SWR cache for this server's tools
                 globalMutate(['getToolsByMcpServerUuid', serverUuid]);
+                refreshGlobalTools();
 
                 toast({
                     description: `${response.tools.length} tools refreshed successfully`
@@ -191,6 +199,7 @@ export default function ToolsManagementPage() {
             toast({
                 description: checked ? "Tool Management enabled" : "Tool Management disabled"
             });
+            refreshGlobalTools();
         } catch (error) {
             toast({
                 variant: "destructive",
