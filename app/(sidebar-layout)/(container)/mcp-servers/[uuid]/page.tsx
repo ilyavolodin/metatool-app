@@ -102,6 +102,7 @@ export default function McpServerDetailPage({
   } = useConnection({
     mcpServerUuid: uuid,
     currentProfileUuid: currentProfile?.uuid,
+    bearerToken: apiKey?.api_key,
     onNotification: handleNotification,
     onStdErrNotification: handleNotification,
   });

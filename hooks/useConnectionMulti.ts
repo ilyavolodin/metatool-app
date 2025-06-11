@@ -27,11 +27,13 @@ interface UseConnectionMultiOptions {
     serverUuid: string,
     notification: Notification
   ) => void;
+  bearerToken?: string;
 }
 
 export function useConnectionMulti({
   onNotification,
   onStdErrNotification,
+  bearerToken,
 }: UseConnectionMultiOptions = {}) {
   const { currentProfile } = useProfiles();
   const { toast } = useToast();
@@ -161,7 +163,7 @@ export function useConnectionMulti({
 
       // Prepare auth headers
       const headers: HeadersInit = {};
-      const token = (await authProvider.tokens())?.access_token;
+      const token = bearerToken || (await authProvider.tokens())?.access_token;
       if (token) {
         headers['Authorization'] = `Bearer ${token}`;
       }

@@ -47,12 +47,17 @@ export default function ToolsManagementPage() {
     const [refreshingServers, setRefreshingServers] = useState<Set<string>>(new Set());
     const { mutate: globalMutate } = useSWRConfig();
 
+    const { data: apiKey } = useSWR(
+        currentProject?.uuid ? `${currentProject?.uuid}/api-keys/getFirst` : null,
+        () => getFirstApiKey(currentProject?.uuid || '')
+    );
+
     const {
         connectionStatuses,
         connect,
         disconnect,
         makeRequest
-    } = useConnectionMulti();
+    } = useConnectionMulti({ bearerToken: apiKey?.api_key });
 
     const hasToolsManagement = currentProfile?.enabled_capabilities?.includes(ProfileCapability.TOOLS_MANAGEMENT);
 
@@ -67,11 +72,6 @@ export default function ToolsManagementPage() {
             setExpandedServers(new Set(mcpServers.map(server => server.uuid)));
         }
     }, [mcpServers]);
-
-    const { data: apiKey } = useSWR(
-        currentProject?.uuid ? `${currentProject?.uuid}/api-keys/getFirst` : null,
-        () => getFirstApiKey(currentProject?.uuid || '')
-    );
 
     const allToolsData = useSWR(
         mcpServers && mcpServers.length > 0 ? ['allTools', mcpServers.map(s => s.uuid)] : null,
