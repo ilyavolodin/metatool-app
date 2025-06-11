@@ -1,4 +1,3 @@
-import { SseError } from '@modelcontextprotocol/sdk/client/sse.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse.js';
 import express from 'express';
@@ -11,10 +10,12 @@ import { connections } from '../types.js';
 export const handleLegacySse = async (req: express.Request, res: express.Response) => {
   try {
     console.log('WARNING: The /server/:uuid/sse endpoint is deprecated and should be replaced with /mcp');
-    
+
     const uuid = req.params.uuid;
     console.log(`New SSE connection for UUID: ${uuid}`);
     console.log(`Session ID: ${req.headers['sessionid'] || 'not provided'}`);
+    console.log('Query parameters:', req.query);
+    console.log('Request headers:', Object.keys(req.headers));
 
     // Clean up existing connection with the same UUID
     if (connections.has(uuid)) {
@@ -36,10 +37,11 @@ export const handleLegacySse = async (req: express.Request, res: express.Respons
     try {
       backingServerTransport = await createTransport(req);
     } catch (error) {
-      if (error instanceof SseError && error.code === 401) {
+      const errorCode = (error as any)?.code ?? (error as any)?.status;
+      if (errorCode === 401) {
         console.error(
           'Received 401 Unauthorized from MCP server:',
-          error.message
+          (error as Error).message
         );
         res.status(401).json(error);
         return;
@@ -58,18 +60,32 @@ export const handleLegacySse = async (req: express.Request, res: express.Respons
     );
     console.log(`Created web app transport for UUID ${uuid}`);
 
+    console.log('Starting web app transport');
     await webAppTransport.start();
+    console.log('Web app transport started');
 
     if (backingServerTransport instanceof StdioClientTransport) {
-      backingServerTransport.stderr!.on('data', (chunk) => {
-        webAppTransport.send({
-          jsonrpc: '2.0',
-          method: 'notifications/stderr',
-          params: {
-            content: chunk.toString(),
-          },
+      if (backingServerTransport.stdout) {
+        backingServerTransport.stdout.on('data', (chunk) => {
+          console.log(`[stdout ${uuid}] ${chunk.toString().trim()}`);
         });
-      });
+
+        backingServerTransport.stdout.on('error', (err) => {
+          console.error(`[stdout ${uuid}] error:`, err);
+        });
+      }
+
+      if (backingServerTransport.stderr) {
+        backingServerTransport.stderr.on('data', (chunk) => {
+          webAppTransport.send({
+            jsonrpc: '2.0',
+            method: 'notifications/stderr',
+            params: {
+              content: chunk.toString(),
+            },
+          });
+        });
+      }
     }
 
     connections.set(uuid, {
@@ -102,6 +118,8 @@ export const handleLegacyMessage = async (req: express.Request, res: express.Res
   try {
     const uuid = req.params.uuid;
     console.log(`Received message for UUID ${uuid}`);
+    console.log('Query parameters:', req.query);
+    console.log('Request body:', req.body);
 
     const connection = connections.get(uuid);
     if (!connection) {

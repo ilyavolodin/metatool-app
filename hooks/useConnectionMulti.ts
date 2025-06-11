@@ -1,9 +1,6 @@
 import { auth } from '@modelcontextprotocol/sdk/client/auth.js';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
-import {
-  SSEClientTransport,
-  SseError,
-} from '@modelcontextprotocol/sdk/client/sse.js';
+import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import { RequestOptions } from '@modelcontextprotocol/sdk/shared/protocol.js';
 import {
   ClientNotification,
@@ -60,9 +57,7 @@ export function useConnectionMulti({
   // Utility function to check if the MCP proxy is healthy
   const checkProxyHealth = async () => {
     try {
-    const proxyHealthUrl = new URL(
-        `${process.env.NEXT_PUBLIC_REMOTE_HOSTING_URL || 'http://localhost:12005/host'}/health`
-      );
+    const proxyHealthUrl = '/host/health';
       const proxyHealthResponse = await fetch(proxyHealthUrl);
       const proxyHealth = await proxyHealthResponse.json();
       if (proxyHealth?.status !== 'ok') {
@@ -82,7 +77,8 @@ export function useConnectionMulti({
   ) => {
     const authProvider = createAuthProvider(serverUuid, currentProfile?.uuid);
 
-    if (error instanceof SseError && error.code === 401) {
+    const errorCode = (error as any)?.code ?? (error as any)?.status;
+    if (errorCode === 401) {
       sessionStorage.setItem(SESSION_KEYS.SERVER_URL, serverUrl || '');
       sessionStorage.setItem(SESSION_KEYS.MCP_SERVER_UUID, serverUuid);
       if (currentProfile?.uuid) {
@@ -157,23 +153,7 @@ export function useConnectionMulti({
     }
 
     // Create proxy URL
-    const mcpProxyServerUrl = new URL(
-      `${process.env.NEXT_PUBLIC_REMOTE_HOSTING_URL || 'http://localhost:12005/host'}/server/${serverUuid}/sse`
-    );
-    mcpProxyServerUrl.searchParams.append(
-      'transportType',
-      mcpServer.type.toLowerCase()
-    );
-    if (mcpServer.type === McpServerType.STDIO) {
-      mcpProxyServerUrl.searchParams.append('command', mcpServer.command || '');
-      mcpProxyServerUrl.searchParams.append('args', mcpServer.args.join(' '));
-      mcpProxyServerUrl.searchParams.append(
-        'env',
-        JSON.stringify(mcpServer.env)
-      );
-    } else {
-      mcpProxyServerUrl.searchParams.append('url', mcpServer.url || '');
-    }
+    const mcpProxyServerUrl = new URL('/host/mcp', location.origin);
 
     try {
       // Get auth provider
@@ -186,15 +166,15 @@ export function useConnectionMulti({
         headers['Authorization'] = `Bearer ${token}`;
       }
 
-      // Create transport
-      const clientTransport = new SSEClientTransport(mcpProxyServerUrl, {
-        eventSourceInit: {
-          fetch: (url, init) => fetch(url, { ...init, headers }),
-        },
-        requestInit: {
-          headers,
-        },
-      });
+      // Create Streamable HTTP transport
+      const clientTransport = new StreamableHTTPClientTransport(
+        mcpProxyServerUrl,
+        {
+          requestInit: {
+            headers,
+          },
+        }
+      );
 
       // Set up notification handlers
       if (onNotification) {
@@ -249,7 +229,8 @@ export function useConnectionMulti({
           return connect(serverUuid);
         }
 
-        if (error instanceof SseError && error.code === 401) {
+        const errorCode = (error as any)?.code ?? (error as any)?.status;
+        if (errorCode === 401) {
           // Don't set error state if we're about to redirect for auth
           return;
         }
