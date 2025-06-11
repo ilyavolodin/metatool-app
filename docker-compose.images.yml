@@ -54,9 +54,7 @@ services:
 
   nginx:
     container_name: metatool-nginx
-    build:
-      context: ./nginx
-      dockerfile: Dockerfile
+    image: ghcr.io/ilyavolodin/metatool-app/metatool-nginx:latest
     ports:
       - "12005:12005"
     depends_on:

@@ -59,3 +59,13 @@ jobs:
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/metatool-migrator:latest
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/metatool-migrator:${{ github.sha }}
 
+      - name: Build and push metatool-nginx image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./nginx
+          file: ./nginx/Dockerfile
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/metatool-nginx:latest
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/metatool-nginx:${{ github.sha }}
+
