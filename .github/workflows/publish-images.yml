@@ -16,6 +16,23 @@ jobs:
     permissions:
       contents: read
       packages: write
+    strategy:
+      matrix:
+        include:
+          - name: metatool-web
+            context: .
+            file: Dockerfile
+            target: runner
+          - name: metatool-remote-hosting
+            context: ./remote-hosting
+            file: ./remote-hosting/Dockerfile
+          - name: metatool-migrator
+            context: .
+            file: Dockerfile
+            target: migrator
+          - name: metatool-nginx
+            context: ./nginx
+            file: ./nginx/Dockerfile
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -27,45 +44,13 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and push metatool-web image
+      - name: Build and push ${{ matrix.name }} image
         uses: docker/build-push-action@v5
         with:
-          context: .
-          file: Dockerfile
-          target: runner
+          context: ${{ matrix.context }}
+          file: ${{ matrix.file }}
+          target: ${{ matrix.target }}
           push: true
           tags: |
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/metatool-web:latest
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/metatool-web:${{ github.sha }}
-
-      - name: Build and push metatool-remote-hosting image
-        uses: docker/build-push-action@v5
-        with:
-          context: ./remote-hosting
-          file: ./remote-hosting/Dockerfile
-          push: true
-          tags: |
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/metatool-remote-hosting:latest
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/metatool-remote-hosting:${{ github.sha }}
-
-      - name: Build and push metatool-migrator image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: Dockerfile
-          target: migrator
-          push: true
-          tags: |
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/metatool-migrator:latest
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/metatool-migrator:${{ github.sha }}
-
-      - name: Build and push metatool-nginx image
-        uses: docker/build-push-action@v5
-        with:
-          context: ./nginx
-          file: ./nginx/Dockerfile
-          push: true
-          tags: |
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/metatool-nginx:latest
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/metatool-nginx:${{ github.sha }}
-
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/${{ matrix.name }}:latest
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/${{ matrix.name }}:${{ github.sha }}
