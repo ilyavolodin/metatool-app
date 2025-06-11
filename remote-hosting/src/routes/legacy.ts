@@ -65,18 +65,8 @@ export const handleLegacySse = async (req: express.Request, res: express.Respons
     console.log('Web app transport started');
 
     if (backingServerTransport instanceof StdioClientTransport) {
-      if (backingServerTransport.stdout) {
-        backingServerTransport.stdout.on('data', (chunk) => {
-          console.log(`[stdout ${uuid}] ${chunk.toString().trim()}`);
-        });
-
-        backingServerTransport.stdout.on('error', (err) => {
-          console.error(`[stdout ${uuid}] error:`, err);
-        });
-      }
-
       if (backingServerTransport.stderr) {
-        backingServerTransport.stderr.on('data', (chunk) => {
+        backingServerTransport.stderr.on('data', (chunk: Buffer) => {
           webAppTransport.send({
             jsonrpc: '2.0',
             method: 'notifications/stderr',

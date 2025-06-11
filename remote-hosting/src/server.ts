@@ -83,7 +83,7 @@ server.on('close', () => {
   console.log('Proxy server closed');
 });
 
-server.on('error', (err) => {
+server.on('error', (err: NodeJS.ErrnoException) => {
   if (err.message.includes(`EADDRINUSE`)) {
     console.error(`❌  Proxy Server PORT IS IN USE at port ${PORT} ❌ `);
   } else {
