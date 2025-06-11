@@ -45,6 +45,7 @@ export const createTransport = async (req: express.Request): Promise<Transport> 
       args,
       env,
       stderr: 'pipe',
+      stdout: 'pipe',
     });
 
     console.log(`Starting MCP server process: ${cmd} ${args.join(' ')}`);
@@ -65,12 +66,22 @@ export const createTransport = async (req: express.Request): Promise<Transport> 
       throw error;
     }
 
-    // Handle stderr output - pipe to console without blocking
+    // Handle stdout/stderr output - pipe to console without blocking
+    if (transport.stdout) {
+      transport.stdout.on('data', (chunk) => {
+        console.log(`[${cmd}] ${chunk.toString().trim()}`);
+      });
+
+      transport.stdout.on('error', (error) => {
+        console.error(`[${cmd}] stdout error:`, error);
+      });
+    }
+
     if (transport.stderr) {
       transport.stderr.on('data', (chunk) => {
         console.error(`[${cmd}] ${chunk.toString().trim()}`);
       });
-      
+
       transport.stderr.on('error', (error) => {
         console.error(`[${cmd}] stderr error:`, error);
       });
@@ -194,6 +205,7 @@ export const createMetaMcpTransport = async (apiKey: string): Promise<Transport>
     args,
     env,
     stderr: 'pipe',
+    stdout: 'pipe',
   });
 
   console.log(`Starting MetaMCP server process: ${cmd} ${args.join(' ')}`);
@@ -214,12 +226,22 @@ export const createMetaMcpTransport = async (apiKey: string): Promise<Transport>
     throw error;
   }
 
-  // Handle stderr output - pipe to console without blocking
+  // Handle stdout/stderr output - pipe to console without blocking
+  if (transport.stdout) {
+    transport.stdout.on('data', (chunk) => {
+      console.log(`[Sub MCP] ${chunk.toString().trim()}`);
+    });
+
+    transport.stdout.on('error', (error) => {
+      console.error(`[Sub MCP] Stdout error:`, error);
+    });
+  }
+
   if (transport.stderr) {
     transport.stderr.on('data', (chunk) => {
       console.error(`[Sub MCP] ${chunk.toString().trim()}`);
     });
-    
+
     transport.stderr.on('error', (error) => {
       console.error(`[Sub MCP] Stderr error:`, error);
     });

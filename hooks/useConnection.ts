@@ -1,9 +1,6 @@
 import { auth } from '@modelcontextprotocol/sdk/client/auth.js';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
-import {
-  SSEClientTransport,
-  SseError,
-} from '@modelcontextprotocol/sdk/client/sse.js';
+import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import { RequestOptions } from '@modelcontextprotocol/sdk/shared/protocol.js';
 import {
   CancelledNotificationSchema,
@@ -233,14 +230,8 @@ export function useConnection({
 
   const checkProxyHealth = async () => {
     try {
-    const proxyHealthUrl = new URL(
-        `${
-          window && window.location
-            ? window.location.protocol + '//' + window.location.host + '/host'
-            : 'http://localhost:12005/host'
-        }/health`
-      );
-      logger.log('Checking proxy health', proxyHealthUrl.toString());
+    const proxyHealthUrl = '/host/health';
+      logger.log('Checking proxy health', proxyHealthUrl);
       const proxyHealthResponse = await fetch(proxyHealthUrl);
       const proxyHealth = await proxyHealthResponse.json();
       if (proxyHealth?.status !== 'ok') {
@@ -254,7 +245,8 @@ export function useConnection({
 
   const handleAuthError = async (error: unknown) => {
     logger.log('handleAuthError', error);
-    if (error instanceof SseError && error.code === 401) {
+    const errorCode = (error as any)?.code ?? (error as any)?.status;
+    if (errorCode === 401) {
       sessionStorage.setItem(SESSION_KEYS.SERVER_URL, mcpServer?.url || '');
       sessionStorage.setItem(SESSION_KEYS.MCP_SERVER_UUID, mcpServerUuid);
       if (currentProfileUuid) {
@@ -306,30 +298,10 @@ export function useConnection({
       setConnectionStatus('error-connecting-to-proxy');
       return;
     }
-    const mcpProxyServerUrl = new URL(
-      `${
-        window && window.location
-          ? window.location.protocol + '//' + window.location.host + '/host'
-          : 'http://localhost:12005/host'
-        }/server/${mcpServerUuid}/sse`
-      );
-    mcpProxyServerUrl.searchParams.append(
-      'transportType',
-      mcpServer.type.toLowerCase()
-    );
-    if (mcpServer.type === McpServerType.STDIO) {
-      mcpProxyServerUrl.searchParams.append('command', mcpServer.command || '');
-      mcpProxyServerUrl.searchParams.append('args', mcpServer.args.join(' '));
-      mcpProxyServerUrl.searchParams.append(
-        'env',
-        JSON.stringify(mcpServer.env)
-      );
-    } else {
-      mcpProxyServerUrl.searchParams.append('url', mcpServer.url || '');
-    }
+    const mcpProxyServerUrl = new URL('/host/mcp', location.origin);
 
     try {
-      // Inject auth manually instead of using SSEClientTransport, because we're
+      // Inject auth manually for the Streamable HTTP transport since we're
       // proxying through the inspector server first.
       const headers: HeadersInit = {};
 
@@ -340,10 +312,7 @@ export function useConnection({
         headers['Authorization'] = `Bearer ${token}`;
       }
 
-    const clientTransport = new SSEClientTransport(mcpProxyServerUrl, {
-      eventSourceInit: {
-        fetch: (url, init) => fetch(url, { ...init, headers }),
-      },
+    const clientTransport = new StreamableHTTPClientTransport(mcpProxyServerUrl, {
       requestInit: {
         headers,
       },
@@ -390,7 +359,8 @@ export function useConnection({
         return connect(undefined, retryCount + 1);
       }
 
-        if (error instanceof SseError && error.code === 401) {
+        const errorCode = (error as any)?.code ?? (error as any)?.status;
+        if (errorCode === 401) {
           // Don't set error state if we're about to redirect for auth
           return;
         }
