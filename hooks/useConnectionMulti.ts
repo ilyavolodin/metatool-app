@@ -140,6 +140,7 @@ export function useConnectionMulti({
       }
     );
 
+
     // Set client in ref
     clientsRef.current[serverUuid] = client;
 
@@ -177,6 +178,8 @@ export function useConnectionMulti({
           },
         }
       );
+
+
 
       // Set up notification handlers
       if (onNotification) {

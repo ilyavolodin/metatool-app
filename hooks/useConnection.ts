@@ -23,7 +23,7 @@ import {
   ServerCapabilities,
   ToolListChangedNotificationSchema,
 } from '@modelcontextprotocol/sdk/types.js';
-import { useState } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import useSWR from 'swr';
 import { z } from 'zod';
 
@@ -66,10 +66,15 @@ export function useConnection({
   const [serverCapabilities, setServerCapabilities] =
     useState<ServerCapabilities | null>(null);
   const [mcpClient, setMcpClient] = useState<Client | null>(null);
+  const mcpClientRef = useRef<Client | null>(null);
   const [requestHistory, setRequestHistory] = useState<
     { request: string; response?: string }[]
   >([]);
   const [completionsSupported, setCompletionsSupported] = useState(true);
+
+  useEffect(() => {
+    mcpClientRef.current = mcpClient;
+  }, [mcpClient]);
 
   // Fetch MCP server data using SWR
   const { data: mcpServer } = useSWR<McpServer | undefined>(
@@ -294,6 +299,7 @@ export function useConnection({
       }
     );
 
+
     try {
       await checkProxyHealth();
       logger.log('Proxy health check passed');
@@ -321,6 +327,7 @@ export function useConnection({
         headers,
       },
     });
+
     logger.log('Connecting via transport', mcpProxyServerUrl.toString());
 
       if (onNotification) {
@@ -390,6 +397,7 @@ export function useConnection({
       }
 
       setMcpClient(client);
+      mcpClientRef.current = client;
       setConnectionStatus('connected');
       logger.log('Connection established');
     } catch (e) {
@@ -398,14 +406,16 @@ export function useConnection({
     }
   };
 
-  const disconnect = async () => {
+  const disconnect = useCallback(async () => {
     logger.log('Disconnecting from MCP server');
-    await mcpClient?.close();
+    if (mcpClientRef.current) {
+      await mcpClientRef.current.close();
+    }
     setMcpClient(null);
     setConnectionStatus('disconnected');
     setCompletionsSupported(false);
     setServerCapabilities(null);
-  };
+  }, []);
 
   return {
     connectionStatus,

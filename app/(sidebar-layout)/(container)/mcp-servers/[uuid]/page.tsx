@@ -177,6 +177,12 @@ export default function McpServerDetailPage({
   }, [mcpServer, form]);
 
   useEffect(() => {
+    if (connectionStatus === 'disconnected') {
+      connectionAttemptedRef.current = false;
+    }
+  }, [connectionStatus]);
+
+  useEffect(() => {
     if (mcpServer &&
       !connectionAttemptedRef.current &&
       connectionStatus === 'disconnected' &&
@@ -208,6 +214,9 @@ export default function McpServerDetailPage({
     }
   }, [connectionStatus, toolsRefreshed, makeRequest, mcpServer, globalMutate]);
 
+  // Disconnect when unmounting. The disconnect callback is memoized with
+  // useCallback in the connection hook, so this effect only triggers on
+  // mount/unmount and not when reconnecting.
   useEffect(() => {
     return () => {
       disconnect();
