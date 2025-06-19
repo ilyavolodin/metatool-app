@@ -10,7 +10,6 @@ import { useEffect, useRef, useState } from 'react';
 import { z } from 'zod';
 
 import { getMcpServerByUuid } from '@/app/actions/mcp-servers';
-import { McpServerType } from '@/db/schema';
 import { useProfiles } from '@/hooks/use-profiles';
 import { useToast } from '@/hooks/use-toast';
 import { ConnectionStatus, SESSION_KEYS } from '@/lib/constants';

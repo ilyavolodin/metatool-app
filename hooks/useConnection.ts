@@ -23,7 +23,7 @@ import {
   ServerCapabilities,
   ToolListChangedNotificationSchema,
 } from '@modelcontextprotocol/sdk/types.js';
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useCallback, useEffect,useRef, useState } from 'react';
 import useSWR from 'swr';
 import { z } from 'zod';
 
@@ -31,11 +31,11 @@ import { getMcpServerByUuid } from '@/app/actions/mcp-servers';
 import { McpServerType } from '@/db/schema';
 import { useToast } from '@/hooks/use-toast';
 import { ConnectionStatus, SESSION_KEYS } from '@/lib/constants';
+import * as logger from '@/lib/logger';
 import {
   Notification,
   StdErrNotificationSchema,
 } from '@/lib/notificationTypes';
-import * as logger from '@/lib/logger';
 import { createAuthProvider } from '@/lib/oauth-provider';
 import packageJson from '@/package.json';
 import { McpServer } from '@/types/mcp-server';

@@ -7,7 +7,7 @@ import {
     getCoreRowModel,
     useReactTable,
 } from '@tanstack/react-table';
-import { Copy, RefreshCw } from 'lucide-react';
+import { RefreshCw } from 'lucide-react'; // Removed Copy
 import { useCallback, useEffect, useState } from 'react';
 import useSWR, { useSWRConfig } from 'swr';
 
@@ -23,21 +23,18 @@ import {
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
-import {
-    Dialog,
-    DialogContent,
-    DialogHeader,
-    DialogTitle,
-    DialogTrigger,
-} from '@/components/ui/dialog';
+// Removed Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { McpServerStatus, ProfileCapability, ToggleStatus, WorkspaceMode } from '@/db/schema';
+// Removed WorkspaceMode from import
+import { McpServerStatus, ProfileCapability, ToggleStatus } from '@/db/schema';
 import { useProfiles } from '@/hooks/use-profiles';
 import { useProjects } from '@/hooks/use-projects';
 import { useToast } from '@/hooks/use-toast';
 import { useConnectionMulti } from '@/hooks/useConnectionMulti';
 import * as logger from '@/lib/logger';
+// Removed Copy import as it's no longer used
+// import { Copy } from 'lucide-react';
 
 export default function ToolsManagementPage() {
     const { currentProfile, mutateActiveProfile } = useProfiles();
@@ -259,71 +256,31 @@ export default function ToolsManagementPage() {
                                         <CardDescription>{server.description || 'No description'}</CardDescription>
                                     </div>
                                     <div className="flex items-center gap-2">
-                                        {server.type === 'SSE' || (currentProfile?.workspace_mode === WorkspaceMode.REMOTE) ? (
-                                            <Button
-                                                size="sm"
-                                                onClick={() => refreshSseTools(server.uuid)}
-                                                disabled={refreshingServers.has(server.uuid) ||
-                                                    connectionStatuses[server.uuid] === 'connecting'}>
-                                                {refreshingServers.has(server.uuid) ||
-                                                    connectionStatuses[server.uuid] === 'connecting' ? (
-                                                    <>
-                                                        <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                                                        {connectionStatuses[server.uuid] === 'connecting'
-                                                            ? 'Connecting...'
-                                                            : 'Refreshing...'}
-                                                    </>
-                                                ) : (
-                                                    <>
-                                                        <RefreshCw className="mr-2 h-4 w-4" />
-                                                        Refresh
-                                                    </>
-                                                )}
-                                            </Button>
-                                        ) : (
-                                            <Dialog>
-                                                <DialogTrigger asChild>
-                                                    <Button size="sm">
-                                                        <RefreshCw className="mr-2 h-4 w-4" />
-                                                        Refresh
-                                                    </Button>
-                                                </DialogTrigger>
-                                                <DialogContent className="w-full max-w-4xl">
-                                                    <DialogHeader>
-                                                        <DialogTitle>Refresh Tools</DialogTitle>
-                                                    </DialogHeader>
-                                                    <div className="py-4">
-                                                        <p className="mb-4">
-                                                            In <b>Compatibility (Local) mode</b>, Command-based MCP servers need to run locally. On next time you run MetaMCP MCP server, it will automatically refresh tools. To refresh tools manually for all installed MCP servers, run the following command:
-                                                        </p>
-                                                        <div className="relative">
-                                                            <Button
-                                                                size="sm"
-                                                                variant="outline"
-                                                                className="absolute top-2 right-2 z-10"
-                                                                onClick={() => {
-                                                                    const command = `npx -y @metamcp/mcp-server-metamcp@latest --metamcp-api-key=${apiKey?.api_key ?? '<create an api key first>'} --metamcp-api-base-url http://localhost:12005 --report`;
-                                                                    navigator.clipboard.writeText(command);
-                                                                    toast({
-                                                                        description: "Command copied to clipboard"
-                                                                    });
-                                                                }}
-                                                            >
-                                                                <Copy className="h-4 w-4" />
-                                                            </Button>
-                                                            <div className="overflow-x-auto max-w-full">
-                                                                <pre className="bg-[#f6f8fa] text-[#24292f] p-4 rounded-md whitespace-pre-wrap break-words">
-                                                                    {`npx -y @metamcp/mcp-server-metamcp@latest --metamcp-api-key=${apiKey?.api_key ?? '<create an api key first>'} --metamcp-api-base-url http://localhost:12005 --report`}
-                                                                </pre>
-                                                            </div>
-                                                        </div>
-                                                        <p className="mt-4 text-sm text-muted-foreground">
-                                                            After running the command, your tools will be refreshed.
-                                                        </p>
-                                                    </div>
-                                                </DialogContent>
-                                            </Dialog>
-                                        )}
+                                        {/* Simplified: Always show the button that calls refreshSseTools,
+                                            as the distinction for LOCAL mode STDIO servers is gone.
+                                            The refreshSseTools function uses makeRequest, which should work for any server type
+                                            connected via the MetaMCP server if it supports 'tools/list'.
+                                        */}
+                                        <Button
+                                            size="sm"
+                                            onClick={() => refreshSseTools(server.uuid)}
+                                            disabled={refreshingServers.has(server.uuid) ||
+                                                connectionStatuses[server.uuid] === 'connecting'}>
+                                            {refreshingServers.has(server.uuid) ||
+                                                connectionStatuses[server.uuid] === 'connecting' ? (
+                                                <>
+                                                    <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                                                    {connectionStatuses[server.uuid] === 'connecting'
+                                                        ? 'Connecting...'
+                                                        : 'Refreshing...'}
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <RefreshCw className="mr-2 h-4 w-4" />
+                                                    Refresh
+                                                </>
+                                            )}
+                                        </Button>
                                         <Button
                                             variant="ghost"
                                             size="sm"

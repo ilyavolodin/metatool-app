@@ -2,21 +2,17 @@ import {
   OAuthClientInformation,
   OAuthTokens,
 } from '@modelcontextprotocol/sdk/shared/auth.js';
-import { sql } from 'drizzle-orm';
+// import { sql } from 'drizzle-orm'; // Will remove if not needed, or keep for '[]' defaults if preferred
 import {
-  AnyPgColumn,
   index,
-  jsonb,
-  pgEnum,
-  pgTable,
-  serial,
+  integer, // Changed from timestamp, jsonb, serial, uuid, pgTable, pgEnum
+  sqliteTable, // Changed from pgTable
   text,
-  timestamp,
   unique,
-  uuid,
-} from 'drizzle-orm/pg-core';
+} from 'drizzle-orm/sqlite-core'; // Changed from pg-core
+import { nanoid } from 'nanoid'; // For generating IDs
 
-import { enumToPgEnum } from './utils/enum-to-pg-enum';
+// Enums remain as TypeScript enums
 
 export enum McpServerStatus {
   ACTIVE = 'ACTIVE',
@@ -41,10 +37,7 @@ export enum ProfileCapability {
   TOOL_LOGS = 'TOOL_LOGS',
 }
 
-export enum WorkspaceMode {
-  REMOTE = 'REMOTE',
-  LOCAL = 'LOCAL',
-}
+// Removed WorkspaceMode enum
 
 export enum ToolExecutionStatus {
   SUCCESS = 'SUCCESS',
@@ -52,111 +45,83 @@ export enum ToolExecutionStatus {
   PENDING = 'PENDING',
 }
 
-export const mcpServerStatusEnum = pgEnum(
-  'mcp_server_status',
-  enumToPgEnum(McpServerStatus)
-);
+// Removed pgEnum declarations
 
-export const toggleStatusEnum = pgEnum(
-  'toggle_status',
-  enumToPgEnum(ToggleStatus)
-);
-
-export const mcpServerTypeEnum = pgEnum(
-  'mcp_server_type',
-  enumToPgEnum(McpServerType)
-);
-
-export const profileCapabilityEnum = pgEnum(
-  'profile_capability',
-  enumToPgEnum(ProfileCapability)
-);
-
-export const workspaceModeEnum = pgEnum(
-  'workspace_mode',
-  enumToPgEnum(WorkspaceMode)
-);
-
-export const toolExecutionStatusEnum = pgEnum(
-  'tool_execution_status',
-  enumToPgEnum(ToolExecutionStatus)
-);
-
-export const projectsTable = pgTable('projects', {
-  uuid: uuid('uuid').primaryKey().defaultRandom(),
+export const projectsTable = sqliteTable('projects', {
+  uuid: text('uuid').primaryKey().$defaultFn(() => nanoid()),
   name: text('name').notNull(),
-  created_at: timestamp('created_at', { withTimezone: true })
+  created_at: integer('created_at', { mode: 'timestamp' })
     .notNull()
-    .defaultNow(),
-  active_profile_uuid: uuid('active_profile_uuid').references(
-    (): AnyPgColumn => {
-      return profilesTable.uuid;
-    }
+    .$defaultFn(() => new Date()),
+  active_profile_uuid: text('active_profile_uuid').references(
+    () => profilesTable.uuid
   ),
 });
 
-export const profilesTable = pgTable(
+export const profilesTable = sqliteTable(
   'profiles',
   {
-    uuid: uuid('uuid').primaryKey().defaultRandom(),
+    uuid: text('uuid').primaryKey().$defaultFn(() => nanoid()),
     name: text('name').notNull(),
-    project_uuid: uuid('project_uuid')
+    project_uuid: text('project_uuid')
       .notNull()
       .references(() => projectsTable.uuid, { onDelete: 'cascade' }),
-    enabled_capabilities: profileCapabilityEnum('enabled_capabilities')
-      .array()
+    enabled_capabilities: text('enabled_capabilities', { mode: 'json' })
+      .$type<ProfileCapability[]>()
       .notNull()
-      .default(sql`'{}'::profile_capability[]`),
-    workspace_mode: workspaceModeEnum('workspace_mode')
+      .default('[]'),
+    // Removed workspace_mode column
+    created_at: integer('created_at', { mode: 'timestamp' })
       .notNull()
-      .default(WorkspaceMode.LOCAL),
-    created_at: timestamp('created_at', { withTimezone: true })
-      .notNull()
-      .defaultNow(),
+      .$defaultFn(() => new Date()),
   },
   (table) => [index('profiles_project_uuid_idx').on(table.project_uuid)]
 );
 
-export const apiKeysTable = pgTable(
+export const apiKeysTable = sqliteTable(
   'api_keys',
   {
-    uuid: uuid('uuid').primaryKey().defaultRandom(),
-    project_uuid: uuid('project_uuid')
+    uuid: text('uuid').primaryKey().$defaultFn(() => nanoid()),
+    project_uuid: text('project_uuid')
       .notNull()
       .references(() => projectsTable.uuid, { onDelete: 'cascade' }),
     api_key: text('api_key').notNull(),
     name: text('name').default('API Key'),
-    created_at: timestamp('created_at', { withTimezone: true })
+    created_at: integer('created_at', { mode: 'timestamp' })
       .notNull()
-      .defaultNow(),
+      .$defaultFn(() => new Date()),
   },
   (table) => [index('api_keys_project_uuid_idx').on(table.project_uuid)]
 );
 
-export const mcpServersTable = pgTable(
+export const mcpServersTable = sqliteTable(
   'mcp_servers',
   {
-    uuid: uuid('uuid').primaryKey().defaultRandom(),
+    uuid: text('uuid').primaryKey().$defaultFn(() => nanoid()),
     name: text('name').notNull(),
     description: text('description'),
-    type: mcpServerTypeEnum('type').notNull().default(McpServerType.STDIO),
-    command: text('command'),
-    args: text('args')
-      .array()
+    type: text('type')
+      .$type<McpServerType>()
       .notNull()
-      .default(sql`'{}'::text[]`),
-    env: jsonb('env')
+      .default(McpServerType.STDIO),
+    command: text('command'),
+    args: text('args', { mode: 'json' }) // Store as JSON string
+      .$type<string[]>()
+      .notNull()
+      .default('[]'),
+    env: text('env', { mode: 'json' }) // Store as JSON string
       .$type<{ [key: string]: string }>()
       .notNull()
-      .default(sql`'{}'::jsonb`),
+      .default('{}'),
     url: text('url'),
-    created_at: timestamp('created_at', { withTimezone: true })
+    created_at: integer('created_at', { mode: 'timestamp' })
       .notNull()
-      .defaultNow(),
-    profile_uuid: uuid('profile_uuid')
+      .$defaultFn(() => new Date()),
+    profile_uuid: text('profile_uuid')
       .notNull()
       .references(() => profilesTable.uuid),
-    status: mcpServerStatusEnum('status')
+    status: text('status')
+      .$type<McpServerStatus>()
       .notNull()
       .default(McpServerStatus.ACTIVE),
   },
@@ -164,34 +129,30 @@ export const mcpServersTable = pgTable(
     index('mcp_servers_status_idx').on(table.status),
     index('mcp_servers_profile_uuid_idx').on(table.profile_uuid),
     index('mcp_servers_type_idx').on(table.type),
-    sql`CONSTRAINT mcp_servers_url_check CHECK (
-      (type = 'SSE' AND url IS NOT NULL AND command IS NULL AND url ~ '^https?://[a-zA-Z0-9-]+(\.[a-zA-Z0-9-]+)*(:[0-9]+)?(/[a-zA-Z0-9-._~:/?#\[\]@!$&''()*+,;=]*)?$') OR
-      (type = 'STDIO' AND url IS NULL AND command IS NOT NULL) OR
-      (type = 'STREAMABLE_HTTP' AND url IS NOT NULL AND command IS NULL AND url ~ '^https?://[a-zA-Z0-9-]+(\.[a-zA-Z0-9-]+)*(:[0-9]+)?(/[a-zA-Z0-9-._~:/?#\[\]@!$&''()*+,;=]*)?$')
-    )`,
+    // Removed complex CHECK constraint, SQLite has limited support for regex in CHECK
   ]
 );
 
 
-export const toolsTable = pgTable(
+export const toolsTable = sqliteTable(
   'tools',
   {
-    uuid: uuid('uuid').primaryKey().defaultRandom(),
+    uuid: text('uuid').primaryKey().$defaultFn(() => nanoid()),
     name: text('name').notNull(),
     description: text('description'),
-    toolSchema: jsonb('tool_schema')
+    toolSchema: text('tool_schema', { mode: 'json' }) // Store as JSON string
       .$type<{
         type: 'object';
         properties?: Record<string, any>;
       }>()
       .notNull(),
-    created_at: timestamp('created_at', { withTimezone: true })
+    created_at: integer('created_at', { mode: 'timestamp' })
       .notNull()
-      .defaultNow(),
-    mcp_server_uuid: uuid('mcp_server_uuid')
+      .$defaultFn(() => new Date()),
+    mcp_server_uuid: text('mcp_server_uuid')
       .notNull()
       .references(() => mcpServersTable.uuid, { onDelete: 'cascade' }),
-    status: toggleStatusEnum('status').notNull().default(ToggleStatus.ACTIVE),
+    status: text('status').$type<ToggleStatus>().notNull().default(ToggleStatus.ACTIVE),
   },
   (table) => [
     index('tools_mcp_server_uuid_idx').on(table.mcp_server_uuid),
@@ -202,28 +163,29 @@ export const toolsTable = pgTable(
   ]
 );
 
-export const toolExecutionLogsTable = pgTable(
+export const toolExecutionLogsTable = sqliteTable(
   'tool_execution_logs',
   {
-    id: serial('id').primaryKey(),
-    mcp_server_uuid: uuid('mcp_server_uuid').references(
+    id: text('id').primaryKey().$defaultFn(() => nanoid()), // Changed from serial to text with nanoid
+    mcp_server_uuid: text('mcp_server_uuid').references(
       () => mcpServersTable.uuid,
       { onDelete: 'cascade' }
     ),
     tool_name: text('tool_name').notNull(),
-    payload: jsonb('payload')
+    payload: text('payload', { mode: 'json' }) // Store as JSON string
       .$type<Record<string, any>>()
       .notNull()
-      .default(sql`'{}'::jsonb`),
-    result: jsonb('result').$type<any>(),
-    status: toolExecutionStatusEnum('status')
+      .default('{}'),
+    result: text('result', { mode: 'json' }).$type<any>(), // Store as JSON string
+    status: text('status')
+      .$type<ToolExecutionStatus>()
       .notNull()
       .default(ToolExecutionStatus.PENDING),
     error_message: text('error_message'),
     execution_time_ms: text('execution_time_ms'),
-    created_at: timestamp('created_at', { withTimezone: true })
+    created_at: integer('created_at', { mode: 'timestamp' })
       .notNull()
-      .defaultNow(),
+      .$defaultFn(() => new Date()),
   },
   (table) => [
     index('tool_execution_logs_mcp_server_uuid_idx').on(table.mcp_server_uuid),
@@ -232,24 +194,24 @@ export const toolExecutionLogsTable = pgTable(
   ]
 );
 
-export const oauthSessionsTable = pgTable(
+export const oauthSessionsTable = sqliteTable(
   'oauth_sessions',
   {
-    uuid: uuid('uuid').primaryKey().defaultRandom(),
-    mcp_server_uuid: uuid('mcp_server_uuid')
+    uuid: text('uuid').primaryKey().$defaultFn(() => nanoid()),
+    mcp_server_uuid: text('mcp_server_uuid')
       .notNull()
       .references(() => mcpServersTable.uuid, { onDelete: 'cascade' }),
-    client_information: jsonb('client_information')
+    client_information: text('client_information', { mode: 'json' }) // Store as JSON string
       .$type<OAuthClientInformation>()
       .notNull(),
-    tokens: jsonb('tokens').$type<OAuthTokens>(),
+    tokens: text('tokens', { mode: 'json' }).$type<OAuthTokens>(), // Store as JSON string
     code_verifier: text('code_verifier'),
-    created_at: timestamp('created_at', { withTimezone: true })
+    created_at: integer('created_at', { mode: 'timestamp' })
       .notNull()
-      .defaultNow(),
-    updated_at: timestamp('updated_at', { withTimezone: true })
+      .$defaultFn(() => new Date()),
+    updated_at: integer('updated_at', { mode: 'timestamp' })
       .notNull()
-      .defaultNow(),
+      .$defaultFn(() => new Date()),
   },
   (table) => [
     index('oauth_sessions_mcp_server_uuid_idx').on(table.mcp_server_uuid),

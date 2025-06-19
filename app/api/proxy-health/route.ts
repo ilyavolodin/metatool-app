@@ -4,9 +4,10 @@ import * as logger from '@/lib/logger';
 
 export async function GET() {
   try {
-    const proxyHealthUrl = `${process.env.REMOTE_HOSTING_URL || 'http://localhost:12005/host'}/health`;
+    // Assuming this is intended to check the health of the current application's /api/health endpoint
+    const healthUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:12005'}/api/health`;
 
-    const response = await fetch(proxyHealthUrl);
+    const response = await fetch(healthUrl);
     const json = await response.json();
     return NextResponse.json(json);
   } catch (error) {

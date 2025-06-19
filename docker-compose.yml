@@ -1,6 +1,6 @@
 services:
-  metatool-web:
-    container_name: metatool-web
+  app:
+    container_name: metatool-app
     build:
       context: .
       dockerfile: Dockerfile
@@ -8,70 +8,27 @@ services:
     env_file:
       - .env
     restart: always
-    # Expose ports only through nginx
-    environment:
-      - NODE_ENV=production
-    depends_on:
-      - metatool-postgres
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-
-  metatool-remote-hosting:
-    container_name: metatool-remote-hosting
-    build:
-      context: ./remote-hosting
-      dockerfile: Dockerfile
-    env_file:
-      - .env
-    restart: always
-    # Expose ports only through nginx
-    environment:
-      - NODE_ENV=production
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-
-  metatool-postgres:
-    container_name: metatool-postgres
-    image: postgres:16.2-alpine3.18
-    restart: always
-    environment:
-      POSTGRES_DB: metatool
-      POSTGRES_USER: metatool
-      POSTGRES_PASSWORD: m3t4t00l
-    ports:
-      - '8432:5432'
-    volumes:
-      - metatool-postgres:/var/lib/postgresql/data
-    healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U metatool" ]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-
-  drizzle-migrate:
-    container_name: drizzle-migrate
-    build:
-      context: .
-      dockerfile: Dockerfile
-      target: migrator
-    command: pnpm drizzle-kit migrate
-    env_file:
-      - .env
-    depends_on:
-      metatool-postgres:
-        condition: service_healthy
-
-  nginx:
-    container_name: metatool-nginx
-    build:
-      context: ./nginx
-      dockerfile: Dockerfile
     ports:
       - "12005:12005"
-    depends_on:
-      - metatool-web
-      - metatool-remote-hosting
+    environment:
+      - NODE_ENV=production
+      # Ensure the Next.js app inside Docker knows which port to listen on
+      - PORT=12005
+      # Environment variables for the new /config route
+      - REMOTE_HOSTING_ENV=docker
+      - REMOTE_HOSTING_ARGS= # Add any specific args if needed
+      # For Sub-MCP server executed by createMetaMcpTransport
+      - METAMCP_API_BASE_URL=http://localhost:12005
+      - USE_DOCKER_HOST=false # Since we are in the same network, direct host is fine
+      # DATABASE_URL can be set in .env file if needed, e.g. DATABASE_URL=sqlite.db
+      # Or rely on the default 'sqlite.db' in db/index.ts
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
-volumes:
-  metatool-postgres:
-    driver: local
+# No external volumes needed for SQLite by default
+# If you want to persist sqlite.db outside the container, you could add a volume mount here:
+# volumes:
+#   metatool_db_data:
+# And in app service:
+#   volumes:
+#     - metatool_db_data:/app/sqlite.db # Assuming sqlite.db is in /app

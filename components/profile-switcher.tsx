@@ -1,6 +1,7 @@
 'use client';
 
-import { Check, ChevronsUpDown, Info, PlusCircle } from 'lucide-react';
+import { Check, ChevronsUpDown, PlusCircle } from 'lucide-react';
+import { Check, ChevronsUpDown, PlusCircle } from 'lucide-react'; // Explicitly removed Info
 import * as React from 'react';
 
 import { createProfile, setProfileActive } from '@/app/actions/profiles';
@@ -29,14 +30,14 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
-import { WorkspaceMode } from '@/db/schema';
+// import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'; // Removed
+// import {
+//   Tooltip,
+//   TooltipContent,
+//   TooltipProvider,
+//   TooltipTrigger,
+// } from '@/components/ui/tooltip'; // Removed
+// import { WorkspaceMode } from '@/db/schema'; // Removed
 import { useProfiles } from '@/hooks/use-profiles';
 import { useProjects } from '@/hooks/use-projects';
 import { useToast } from '@/hooks/use-toast';
@@ -56,7 +57,7 @@ export function ProfileSwitcher() {
   const [open, setOpen] = React.useState(false);
   const [showNewProfileDialog, setShowNewProfileDialog] = React.useState(false);
   const [newProfileName, setNewProfileName] = React.useState('');
-  const [profileMode, setProfileMode] = React.useState('default');
+  // const [profileMode, setProfileMode] = React.useState('default'); // Removed
   const [isCreating, setIsCreating] = React.useState(false);
   const [isActivating, setIsActivating] = React.useState(false);
 
@@ -75,14 +76,14 @@ export function ProfileSwitcher() {
         return;
       }
       setIsCreating(true);
+      // createProfile action no longer takes profileMode
       const profile = await createProfile(
         currentProject.uuid,
-        newProfileName.trim(),
-        profileMode
+        newProfileName.trim()
       );
       setCurrentProfile(profile);
       setNewProfileName('');
-      setProfileMode('default');
+      // setProfileMode('default'); // Removed
       setShowNewProfileDialog(false);
       toast({
         title: 'Success',
@@ -187,22 +188,7 @@ export function ProfileSwitcher() {
               ? 'Activating...'
               : 'Activate this Workspace'}
       </Button>
-      {currentProfile && (
-        <div className="text-xs text-muted-foreground text-center flex items-center justify-center gap-1">
-          Mode: {currentProfile.workspace_mode === WorkspaceMode.LOCAL ? 'Compatibility (Local)' : 'Default (Remote)'}
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Info className="h-3 w-3 cursor-help opacity-70" />
-              </TooltipTrigger>
-              <TooltipContent className="max-w-[300px] p-3">
-                <p>This workspace is set to {currentProfile.workspace_mode === WorkspaceMode.LOCAL ? 'Compatibility' : 'Default'} mode.</p>
-                <p className="mt-2">Workspace mode cannot be changed after creation. To use a different mode, create a new workspace and select the desired mode.</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        </div>
-      )}
+      {/* Removed WorkspaceMode display */}
       <Dialog
         open={showNewProfileDialog}
         onOpenChange={setShowNewProfileDialog}>
@@ -224,30 +210,7 @@ export function ProfileSwitcher() {
                   onChange={(e) => setNewProfileName(e.target.value)}
                 />
               </div>
-              <div className='space-y-2'>
-                <Label>Workspace Mode</Label>
-                <RadioGroup
-                  value={profileMode}
-                  onValueChange={setProfileMode}
-                  className="flex flex-col space-y-1"
-                >
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="default" id="default-mode" />
-                    <Label htmlFor="default-mode">Default Mode</Label>
-                  </div>
-                  <div className="text-sm text-muted-foreground ml-6 -mt-1">
-                    Mcp servers are hosted with MetaMCP App remotely, easy to setup/manage and supports OAuth Mcp servers. You can still use local proxy with it. (The default Dockerfile for remote hosting supports uvx and npx MCP servers, and you can customize it.)
-                  </div>
-
-                  <div className="flex items-center space-x-2 mt-2">
-                    <RadioGroupItem value="compatibility" id="compatibility-mode" />
-                    <Label htmlFor="compatibility-mode">Compatibility Mode</Label>
-                  </div>
-                  <div className="text-sm text-muted-foreground ml-6 -mt-1">
-                    Mcp servers are executed locally through proxy, so it has local access: <a href="https://github.com/metatool-ai/mcp-server-metamcp" className='underline text-blue-600 hover:text-blue-500' target="_blank" rel="noopener noreferrer">https://github.com/metatool-ai/mcp-server-metamcp</a>
-                  </div>
-                </RadioGroup>
-              </div>
+              {/* Removed Workspace Mode selection RadioGroup */}
             </div>
           </div>
           <DialogFooter>

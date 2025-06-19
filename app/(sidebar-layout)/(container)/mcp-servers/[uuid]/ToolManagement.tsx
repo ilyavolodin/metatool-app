@@ -1,5 +1,5 @@
 import { ClientRequest, ListToolsResultSchema } from "@modelcontextprotocol/sdk/types.js";
-import { Copy, RefreshCw } from "lucide-react";
+import { RefreshCw } from "lucide-react"; // Removed Copy
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import useSWR from "swr";
@@ -8,9 +8,9 @@ import { z } from "zod";
 import { getToolsByMcpServerUuid, saveToolsToDatabase } from "@/app/actions/tools";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { McpServerType, WorkspaceMode } from "@/db/schema";
-import { useProfiles } from "@/hooks/use-profiles";
+// Removed Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger
+import { McpServerType } from "@/db/schema";
+// import { useProfiles } from "@/hooks/use-profiles";
 import { useToast } from "@/hooks/use-toast";
 import * as logger from "@/lib/logger";
 
@@ -23,13 +23,13 @@ interface ToolManagementProps {
         type: McpServerType;
     };
     hasToolsManagement: boolean;
-    apiKey?: {
-        api_key: string;
-    } | null;
+    // apiKey?: { // apiKey prop removed
+    //     api_key: string;
+    // } | null;
     makeRequest: (request: ClientRequest, schema: z.ZodType) => Promise<any>;
 }
 
-export default function ToolManagement({ mcpServer, hasToolsManagement, apiKey, makeRequest }: ToolManagementProps) {
+export default function ToolManagement({ mcpServer, hasToolsManagement, /* apiKey, */ makeRequest }: ToolManagementProps) { // apiKey destructured but commented
     const router = useRouter();
     const { toast } = useToast();
     const { mutate: mutateTools } = useSWR(
@@ -37,8 +37,8 @@ export default function ToolManagement({ mcpServer, hasToolsManagement, apiKey, 
         () => getToolsByMcpServerUuid(mcpServer.uuid)
     );
 
-    const { currentProfile } = useProfiles();
-    const currentProfileMode = currentProfile?.workspace_mode;
+    // const { currentProfile } = useProfiles(); // Removed if not used elsewhere in this component
+    // const currentProfileMode = currentProfile?.workspace_mode; // Removed
 
     // Add missing state definitions
     // eslint-disable-next-line unused-imports/no-unused-vars
@@ -100,86 +100,42 @@ export default function ToolManagement({ mcpServer, hasToolsManagement, apiKey, 
         <div className="mt-8">
             <div className="flex justify-between items-center mb-4">
                 <h2 className="text-2xl font-bold">Tools</h2>
-                {mcpServer.type === McpServerType.STDIO && currentProfileMode === WorkspaceMode.LOCAL ? (
-                    <Dialog>
-                        <DialogTrigger asChild>
-                            <Button size="sm">
-                                <RefreshCw className="mr-2 h-4 w-4" />
-                                Refresh
-                            </Button>
-                        </DialogTrigger>
-                        <DialogContent className="w-full max-w-4xl">
-                            <DialogHeader>
-                                <DialogTitle>Refresh Tools</DialogTitle>
-                            </DialogHeader>
-                            <div className="py-4">
-                                <p className="mb-4">
-                                    Command-based MCP servers need to run locally. On next time you run MetaMCP MCP server, it will automatically refresh tools. To refresh tools manually for all installed MCP servers, run the following command:
-                                </p>
-                                <div className="relative">
-                                    <Button
-                                        size="sm"
-                                        variant="outline"
-                                        className="absolute top-2 right-2 z-10"
-                                        onClick={() => {
-                                            const command = `npx -y @metamcp/mcp-server-metamcp@latest --metamcp-api-key=${apiKey?.api_key ?? '<create an api key first>'} --metamcp-api-base-url http://localhost:12005 --report`;
-                                            navigator.clipboard.writeText(command);
-                                            toast({
-                                                description: "Command copied to clipboard"
-                                            });
-                                        }}
-                                    >
-                                        <Copy className="h-4 w-4" />
-                                    </Button>
-                                    <div className="overflow-x-auto max-w-full">
-                                        <pre className="bg-[#f6f8fa] text-[#24292f] p-4 rounded-md whitespace-pre-wrap break-words">
-                                            {`npx -y @metamcp/mcp-server-metamcp@latest --metamcp-api-key=${apiKey?.api_key ?? '<create an api key first>'} --metamcp-api-base-url http://localhost:12005 --report`}
-                                        </pre>
-                                    </div>
-                                </div>
-                                <p className="mt-4 text-sm text-muted-foreground">
-                                    After running the command, your tools will be refreshed.
-                                </p>
-                            </div>
-                        </DialogContent>
-                    </Dialog>
-                ) : (
-                    <Button size="sm" onClick={async () => {
-                        try {
-                            const response = await sendMCPRequest(
-                                {
-                                    method: "tools/list" as const,
-                                    params: {}
-                                },
-                                ListToolsResultSchema,
-                                "tools"
-                            );
+                {/* Simplified refresh button logic - always use sendMCPRequest */}
+                <Button size="sm" onClick={async () => {
+                    try {
+                        const response = await sendMCPRequest(
+                            {
+                                method: "tools/list" as const,
+                                params: {}
+                            },
+                            ListToolsResultSchema,
+                            "tools"
+                        );
 
-                            if (response.tools.length > 0) {
-                                await saveToolsToDatabase(mcpServer.uuid, response.tools);
-                                await mutateTools();
+                        if (response.tools.length > 0) {
+                            await saveToolsToDatabase(mcpServer.uuid, response.tools);
+                            await mutateTools();
 
-                                toast({
-                                    description: `${response.tools.length} tools refreshed successfully`
-                                });
-                            } else {
-                                toast({
-                                    description: "No tools found to refresh"
-                                });
-                            }
-                        } catch (error) {
-                            logger.error("Error refreshing tools:", error);
                             toast({
-                                variant: "destructive",
-                                title: "Error refreshing tools",
-                                description: error instanceof Error ? error.message : "An unknown error occurred"
+                                description: `${response.tools.length} tools refreshed successfully`
+                            });
+                        } else {
+                            toast({
+                                description: "No tools found to refresh"
                             });
                         }
-                    }}>
-                        <RefreshCw className="mr-2 h-4 w-4" />
-                        Refresh
-                    </Button>
-                )}
+                    } catch (error) {
+                        logger.error("Error refreshing tools:", error);
+                        toast({
+                            variant: "destructive",
+                            title: "Error refreshing tools",
+                            description: error instanceof Error ? error.message : "An unknown error occurred"
+                        });
+                    }
+                }}>
+                    <RefreshCw className="mr-2 h-4 w-4" />
+                    Refresh
+                </Button>
             </div>
             <ToolsList mcpServerUuid={mcpServer.uuid} />
         </div>
