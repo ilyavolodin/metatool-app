@@ -3,10 +3,10 @@ import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js'
 import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse.js';
 import { NextRequest, NextResponse } from 'next/server';
 
-import * as logger from '@/lib/logger';
-import { mcpProxy } from '@/lib/mcpUtils';
-import { createMetaMcpTransport } from '@/lib/transports';
-import { metaMcpConnections } from '@/lib/types';
+import { mcpProxy } from '@/app/lib/mcpUtils'; // Corrected path
+import { createMetaMcpTransport } from '@/app/lib/transports'; // Corrected path
+import { metaMcpConnections } from '@/app/lib/types'; // Corrected path
+import * as logger from '@/lib/logger'; // Correct
 // Note: extractApiKey from utils.ts gets it from header, here we get it from path param.
 
 export async function GET(req: NextRequest, { params }: { params: { apiKey: string } }) {

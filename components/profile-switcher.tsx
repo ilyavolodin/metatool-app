@@ -1,7 +1,6 @@
 'use client';
 
 import { Check, ChevronsUpDown, PlusCircle } from 'lucide-react';
-import { Check, ChevronsUpDown, PlusCircle } from 'lucide-react'; // Explicitly removed Info
 import * as React from 'react';
 
 import { createProfile, setProfileActive } from '@/app/actions/profiles';

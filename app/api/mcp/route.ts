@@ -5,11 +5,11 @@ import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js'
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { NextRequest, NextResponse } from 'next/server';
 
-import * as logger from '@/lib/logger';
-import { mcpProxy } from '@/lib/mcpUtils';
-import { createMetaMcpTransport } from '@/lib/transports';
-import { metaMcpConnections } from '@/lib/types';
-import { extractApiKey } from '@/lib/utils';
+import { mcpProxy } from '@/app/lib/mcpUtils'; // Corrected
+import { createMetaMcpTransport } from '@/app/lib/transports'; // Corrected
+import { metaMcpConnections } from '@/app/lib/types'; // Corrected
+import { extractApiKey } from '@/app/lib/utils'; // Corrected
+import * as logger from '@/lib/logger'; // Correct
 
 // Helper to create a mock Response object for StreamableHTTPServerTransport
 function createMockResponse(writer: WritableStreamDefaultWriter) {

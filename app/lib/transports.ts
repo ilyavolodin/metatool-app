@@ -36,12 +36,10 @@ export const createMetaMcpTransport = async (apiKey: string): Promise<Transport>
     ...process.env,
     ...defaultEnvironment,
     METAMCP_API_KEY: apiKey,
-    METAMCP_API_BASE_URL:
-      process.env.METAMCP_API_BASE_URL ||
-      (process.env.USE_DOCKER_HOST === 'true'
-        ? 'http://host.docker.internal:12005' // Port should be the Next.js app's port
-        : 'http://localhost:12005'), // Port should be the Next.js app's port
-    USE_DOCKER_HOST: process.env.USE_DOCKER_HOST,
+    // The spawned @metamcp/mcp-server-metamcp process should call back to the Next.js app,
+    // which is listening on port 12005 within the container's localhost.
+    METAMCP_API_BASE_URL: 'http://localhost:12005',
+    // USE_DOCKER_HOST is no longer needed as the context is simpler.
   };
 
   const { cmd, args } = findActualExecutable(command, origArgs);

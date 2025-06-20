@@ -5,10 +5,10 @@ import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js'
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { NextRequest, NextResponse } from 'next/server';
 
-import * as logger from '@/lib/logger';
-import { mcpProxy } from '@/lib/mcpUtils';
-import { createMetaMcpTransport } from '@/lib/transports';
-import { metaMcpConnections } from '@/lib/types';
+import { mcpProxy } from '@/app/lib/mcpUtils'; // Corrected path
+import { createMetaMcpTransport } from '@/app/lib/transports'; // Corrected path
+import { metaMcpConnections } from '@/app/lib/types'; // Corrected path
+import * as logger from '@/lib/logger'; // This path is likely correct as lib/ is top-level
 // API key is from path param
 
 // Helper to create a mock Response object (copied from app/api/mcp/route.ts)

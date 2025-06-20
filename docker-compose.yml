@@ -5,8 +5,7 @@ services:
       context: .
       dockerfile: Dockerfile
       target: runner
-    env_file:
-      - .env
+    # env_file removed
     restart: always
     ports:
       - "12005:12005"
@@ -14,14 +13,13 @@ services:
       - NODE_ENV=production
       # Ensure the Next.js app inside Docker knows which port to listen on
       - PORT=12005
-      # Environment variables for the new /config route
-      - REMOTE_HOSTING_ENV=docker
-      - REMOTE_HOSTING_ARGS= # Add any specific args if needed
-      # For Sub-MCP server executed by createMetaMcpTransport
-      - METAMCP_API_BASE_URL=http://localhost:12005
-      - USE_DOCKER_HOST=false # Since we are in the same network, direct host is fine
-      # DATABASE_URL can be set in .env file if needed, e.g. DATABASE_URL=sqlite.db
+      # DATABASE_URL can be set here if needed, e.g. DATABASE_URL=sqlite.db
       # Or rely on the default 'sqlite.db' in db/index.ts
+      # Public environment variables for Next.js (available client & server side)
+      # These are typically set at build time, but can be overridden at runtime if app is configured for it.
+      # For server-side use of these, they must be explicitly passed.
+      - NEXT_PUBLIC_APP_URL=http://localhost:12005
+      - NEXT_PUBLIC_REMOTE_HOSTING_URL=/ # Changed to relative path
     extra_hosts:
       - "host.docker.internal:host-gateway"
 

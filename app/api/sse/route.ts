@@ -3,11 +3,11 @@ import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js'
 import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse.js';
 import { NextRequest, NextResponse } from 'next/server';
 
-import * as logger from '@/lib/logger';
-import { mcpProxy } from '@/lib/mcpUtils';
-import { createMetaMcpTransport } from '@/lib/transports';
-import { metaMcpConnections } from '@/lib/types';
-import { extractApiKey } from '@/lib/utils'; // Using extractApiKey
+import { mcpProxy } from '@/app/lib/mcpUtils'; // Corrected
+import { createMetaMcpTransport } from '@/app/lib/transports'; // Corrected
+import { metaMcpConnections } from '@/app/lib/types'; // Corrected
+import { extractApiKey } from '@/app/lib/utils'; // Corrected
+import * as logger from '@/lib/logger'; // Correct
 
 export async function GET(req: NextRequest) {
   const routeName = '/api/sse'; // For logging context

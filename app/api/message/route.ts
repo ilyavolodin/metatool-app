@@ -1,9 +1,9 @@
 import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse.js';
 import { NextRequest, NextResponse } from 'next/server';
 
-import * as logger from '@/lib/logger';
-import { metaMcpConnections } from '@/lib/types';
-import { extractApiKey } from '@/lib/utils';
+import { metaMcpConnections } from '@/app/lib/types'; // Corrected
+import { extractApiKey } from '@/app/lib/utils'; // Corrected
+import * as logger from '@/lib/logger'; // Correct
 
 export async function POST(req: NextRequest) {
   const routeName = '/api/message'; // For logging context
