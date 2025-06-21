@@ -13,7 +13,7 @@ import {
 } from "react-hook-form"
 
 import { Label } from "@/components/ui/label"
-import { cn } from "@/lib/utils"
+import { cn } from "@/app/lib/utils" // Corrected path
 
 const Form = FormProvider
 

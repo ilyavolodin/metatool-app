@@ -9,9 +9,16 @@ import { metaMcpConnections } from '@/app/lib/types'; // Corrected path
 import * as logger from '@/lib/logger'; // Correct
 // Note: extractApiKey from utils.ts gets it from header, here we get it from path param.
 
-export async function GET(req: NextRequest, { params }: { params: { apiKey: string } }) {
-  const apiKeyFromPath = params.apiKey; // Renamed for clarity
-  const routeName = `/api/api-key/${apiKeyFromPath}/sse`; // For logging context
+interface ApiKeyRouteContext { // Added interface
+  params: {
+    apiKey: string;
+  };
+}
+
+export async function GET(req: NextRequest, context: ApiKeyRouteContext) { // Changed signature
+  const { params } = context; // Access params
+  const apiKeyFromPath = params.apiKey;
+  const routeName = `/api/api-key/${apiKeyFromPath}/sse`;
   try {
     if (!apiKeyFromPath) {
       logger.warn(`No API key provided in path for GET ${routeName}`);

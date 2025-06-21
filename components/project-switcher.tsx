@@ -30,7 +30,7 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { useProjects } from '@/hooks/use-projects';
-import { cn } from '@/lib/utils';
+import { cn } from '@/app/lib/utils'; // Corrected path
 
 export function ProjectSwitcher() {
   const { projects, currentProject, setCurrentProject, mutate } = useProjects();

@@ -45,7 +45,7 @@ import { Switch } from '@/components/ui/switch';
 import { ProfileCapability, ToolExecutionStatus } from '@/db/schema';
 import { useProfiles } from '@/hooks/use-profiles';
 import { useToast } from '@/hooks/use-toast';
-import { cn } from '@/lib/utils';
+import { cn } from '@/app/lib/utils'; // Corrected path
 
 export default function ToolExecutionLogsPage() {
     const { currentProfile, mutateActiveProfile } = useProfiles();

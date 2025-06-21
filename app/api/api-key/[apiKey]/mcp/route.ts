@@ -46,7 +46,14 @@ function createMockResponse(writer: WritableStreamDefaultWriter) {
   } as any;
 }
 
-export async function GET(req: NextRequest, { params }: { params: { apiKey: string } }) {
+interface ApiKeyRouteContext {
+  params: {
+    apiKey: string;
+  };
+}
+
+export async function GET(req: NextRequest, context: ApiKeyRouteContext) {
+  const { params } = context; // Access params after this line
   try {
     const apiKeyFromPath = params.apiKey;
     if (!apiKeyFromPath) {

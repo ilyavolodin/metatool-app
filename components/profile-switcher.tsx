@@ -1,6 +1,6 @@
 'use client';
 
-import { Check, ChevronsUpDown, PlusCircle } from 'lucide-react';
+import { Check, ChevronsUpDown, PlusCircle } from 'lucide-react'; // Single import line
 import * as React from 'react';
 
 import { createProfile, setProfileActive } from '@/app/actions/profiles';
@@ -29,18 +29,10 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
-// import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'; // Removed
-// import {
-//   Tooltip,
-//   TooltipContent,
-//   TooltipProvider,
-//   TooltipTrigger,
-// } from '@/components/ui/tooltip'; // Removed
-// import { WorkspaceMode } from '@/db/schema'; // Removed
 import { useProfiles } from '@/hooks/use-profiles';
 import { useProjects } from '@/hooks/use-projects';
 import { useToast } from '@/hooks/use-toast';
-import { cn } from '@/lib/utils';
+import { cn } from '@/app/lib/utils'; // Corrected path
 
 export function ProfileSwitcher() {
   const { currentProject } = useProjects();
@@ -56,7 +48,6 @@ export function ProfileSwitcher() {
   const [open, setOpen] = React.useState(false);
   const [showNewProfileDialog, setShowNewProfileDialog] = React.useState(false);
   const [newProfileName, setNewProfileName] = React.useState('');
-  // const [profileMode, setProfileMode] = React.useState('default'); // Removed
   const [isCreating, setIsCreating] = React.useState(false);
   const [isActivating, setIsActivating] = React.useState(false);
 
@@ -75,14 +66,12 @@ export function ProfileSwitcher() {
         return;
       }
       setIsCreating(true);
-      // createProfile action no longer takes profileMode
       const profile = await createProfile(
         currentProject.uuid,
         newProfileName.trim()
       );
       setCurrentProfile(profile);
       setNewProfileName('');
-      // setProfileMode('default'); // Removed
       setShowNewProfileDialog(false);
       toast({
         title: 'Success',
@@ -187,7 +176,6 @@ export function ProfileSwitcher() {
               ? 'Activating...'
               : 'Activate this Workspace'}
       </Button>
-      {/* Removed WorkspaceMode display */}
       <Dialog
         open={showNewProfileDialog}
         onOpenChange={setShowNewProfileDialog}>
@@ -209,7 +197,6 @@ export function ProfileSwitcher() {
                   onChange={(e) => setNewProfileName(e.target.value)}
                 />
               </div>
-              {/* Removed Workspace Mode selection RadioGroup */}
             </div>
           </div>
           <DialogFooter>
