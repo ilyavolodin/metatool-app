@@ -1,34 +1,29 @@
-import { eq } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 
 import { db } from '@/db';
-import { profilesTable } from '@/db/schema';
 import * as logger from '@/lib/logger';
+import { Profile } from '@/types/profile'; // Assuming Profile type definition
 
 import { authenticateApiKey } from '../auth';
 
 export async function GET(request: Request) {
   try {
-    const auth = await authenticateApiKey(request);
-    if (auth.error) return auth.error;
+    const authResult = await authenticateApiKey(request);
+    if (authResult.error) return authResult.error;
+    const { activeProfile } = authResult;
 
-    const profile = await db
-      .select({
-        enabled_capabilities: profilesTable.enabled_capabilities,
-      })
-      .from(profilesTable)
-      .where(eq(profilesTable.uuid, auth.activeProfile.uuid))
-      .limit(1);
+    const stmt = db.prepare('SELECT enabled_capabilities FROM profiles WHERE uuid = ?');
+    const profileData = stmt.get(activeProfile.uuid) as Pick<Profile, 'enabled_capabilities'> | undefined;
 
-    if (profile.length === 0) {
+    if (!profileData) {
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
     }
 
     return NextResponse.json({
-      profileCapabilities: profile[0].enabled_capabilities,
+      profileCapabilities: JSON.parse(profileData.enabled_capabilities as unknown as string || '[]'),
     });
   } catch (error) {
-    logger.error(error);
+    logger.error('Failed to fetch profile capabilities:',error);
     return NextResponse.json(
       { error: 'Failed to fetch profile capabilities' },
       { status: 500 }

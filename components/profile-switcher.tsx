@@ -4,6 +4,7 @@ import { Check, ChevronsUpDown, PlusCircle } from 'lucide-react'; // Single impo
 import * as React from 'react';
 
 import { createProfile, setProfileActive } from '@/app/actions/profiles';
+import { cn } from '@/app/lib/utils'; // Corrected path
 import { Button } from '@/components/ui/button';
 import {
   Command,
@@ -32,7 +33,6 @@ import {
 import { useProfiles } from '@/hooks/use-profiles';
 import { useProjects } from '@/hooks/use-projects';
 import { useToast } from '@/hooks/use-toast';
-import { cn } from '@/app/lib/utils'; // Corrected path
 
 export function ProfileSwitcher() {
   const { currentProject } = useProjects();

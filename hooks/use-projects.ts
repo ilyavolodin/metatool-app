@@ -7,7 +7,7 @@ import { Project } from '@/types/project';
 const CURRENT_PROJECT_KEY = 'metamcp-current-project';
 
 export const useProjects = () => {
-  const { data, mutate, isLoading } = useSWR('projects', getProjects);
+  const { data, mutate, isLoading } = useSWR<Project[]>('projects', getProjects);
   const [currentProject, setCurrentProject] = useState<Project | null>(null);
 
   // Load saved project on mount

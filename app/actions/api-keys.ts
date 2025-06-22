@@ -1,72 +1,58 @@
 'use server';
 
-import { and, eq } from 'drizzle-orm';
 import { customAlphabet } from 'nanoid';
+import { nanoid as generateId } from 'nanoid';
 
 import { db } from '@/db';
-import { apiKeysTable } from '@/db/schema';
 import { ApiKey } from '@/types/api-key';
 
-const nanoid = customAlphabet(
+const generateApiKey = customAlphabet(
   '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz',
   64
 );
 
-export async function createApiKey(projectUuid: string, name?: string) {
-  const newApiKey = `sk_mt_${nanoid(64)}`;
+export async function createApiKey(projectUuid: string, name?: string): Promise<ApiKey> {
+  const newApiKey = `sk_mt_${generateApiKey(64)}`;
+  const uuid = generateId();
+  const created_at = new Date().toISOString();
 
-  const apiKey = await db
-    .insert(apiKeysTable)
-    .values({
-      project_uuid: projectUuid,
-      api_key: newApiKey,
-      name,
-    })
-    .returning();
-
-  return apiKey[0] as ApiKey;
+  const stmt = db.prepare(
+    'INSERT INTO api_keys (uuid, project_uuid, api_key, name, created_at) VALUES (?, ?, ?, ?, ?) RETURNING *'
+  );
+  const apiKey = stmt.get(uuid, projectUuid, newApiKey, name, created_at);
+  return apiKey as ApiKey;
 }
 
-export async function getFirstApiKey(projectUuid: string) {
+export async function getFirstApiKey(projectUuid: string): Promise<ApiKey | null> {
   if (!projectUuid) {
     return null;
   }
 
-  let apiKey = await db.query.apiKeysTable.findFirst({
-    where: eq(apiKeysTable.project_uuid, projectUuid),
-  });
+  const stmtSelect = db.prepare('SELECT * FROM api_keys WHERE project_uuid = ? LIMIT 1');
+  let apiKey = stmtSelect.get(projectUuid);
 
   if (!apiKey) {
-    const newApiKey = `sk_mt_${nanoid(64)}`;
-    await db.insert(apiKeysTable).values({
-      project_uuid: projectUuid,
-      api_key: newApiKey,
-    });
+    const newApiKey = `sk_mt_${generateApiKey(64)}`;
+    const uuid = generateId();
+    const created_at = new Date().toISOString();
+    const stmtInsert = db.prepare(
+      'INSERT INTO api_keys (uuid, project_uuid, api_key, created_at) VALUES (?, ?, ?, ?)'
+    );
+    stmtInsert.run(uuid, projectUuid, newApiKey, created_at);
 
-    apiKey = await db.query.apiKeysTable.findFirst({
-      where: eq(apiKeysTable.project_uuid, projectUuid),
-    });
+    apiKey = stmtSelect.get(projectUuid);
   }
 
-  return apiKey as ApiKey;
+  return apiKey as ApiKey | null;
 }
 
-export async function getProjectApiKeys(projectUuid: string) {
-  const apiKeys = await db
-    .select()
-    .from(apiKeysTable)
-    .where(eq(apiKeysTable.project_uuid, projectUuid));
-
+export async function getProjectApiKeys(projectUuid: string): Promise<ApiKey[]> {
+  const stmt = db.prepare('SELECT * FROM api_keys WHERE project_uuid = ?');
+  const apiKeys = stmt.all(projectUuid);
   return apiKeys as ApiKey[];
 }
 
-export async function deleteApiKey(projectUuid: string, apiKeyUuid: string) {
-  await db
-    .delete(apiKeysTable)
-    .where(
-      and(
-        eq(apiKeysTable.uuid, apiKeyUuid),
-        eq(apiKeysTable.project_uuid, projectUuid)
-      )
-    );
+export async function deleteApiKey(projectUuid: string, apiKeyUuid: string): Promise<void> {
+  const stmt = db.prepare('DELETE FROM api_keys WHERE uuid = ? AND project_uuid = ?');
+  stmt.run(apiKeyUuid, projectUuid);
 }

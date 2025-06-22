@@ -16,8 +16,9 @@ export function useProfiles() {
     error: profilesError,
     isLoading: profilesLoading,
     mutate: mutateProfiles,
-  } = useSWR(currentProject ? `${currentProject.uuid}/profiles` : null, () =>
-    getProfiles(currentProject?.uuid || '')
+  } = useSWR<Profile[]>(
+    currentProject ? `${currentProject.uuid}/profiles` : null,
+    () => getProfiles(currentProject?.uuid || '')
   );
 
   const {
@@ -25,7 +26,7 @@ export function useProfiles() {
     isLoading: activeProfileLoading,
     error: activeProfileError,
     mutate: mutateActiveProfile,
-  } = useSWR(
+  } = useSWR<Profile | null>(
     currentProject ? `${currentProject.uuid}/profiles/current` : null,
     () => getProjectActiveProfile(currentProject?.uuid || '')
   );

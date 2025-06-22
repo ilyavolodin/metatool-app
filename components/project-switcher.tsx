@@ -4,6 +4,7 @@ import { Check, ChevronsUpDown, PlusCircle } from 'lucide-react';
 import * as React from 'react';
 
 import { createProject } from '@/app/actions/projects';
+import { cn } from '@/app/lib/utils'; // Corrected path
 import { Button } from '@/components/ui/button';
 import {
   Command,
@@ -30,7 +31,6 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { useProjects } from '@/hooks/use-projects';
-import { cn } from '@/app/lib/utils'; // Corrected path
 
 export function ProjectSwitcher() {
   const { projects, currentProject, setCurrentProject, mutate } = useProjects();

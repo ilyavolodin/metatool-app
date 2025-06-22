@@ -4,10 +4,10 @@ import {
   OAuthClientInformation,
   OAuthTokens,
 } from '@modelcontextprotocol/sdk/shared/auth.js';
-import { eq } from 'drizzle-orm';
+import { nanoid } from 'nanoid';
 
 import { db } from '@/db';
-import { oauthSessionsTable } from '@/db/schema';
+import { OAuthSession } from '@/types/oauth'; // Assuming you have this type
 
 export async function saveOAuthSession({
   mcpServerUuid,
@@ -19,36 +19,64 @@ export async function saveOAuthSession({
   clientInformation?: OAuthClientInformation;
   tokens?: OAuthTokens;
   codeVerifier?: string;
-}) {
-  // Check if session exists
-  const existingSession = await db.query.oauthSessionsTable.findFirst({
-    where: eq(oauthSessionsTable.mcp_server_uuid, mcpServerUuid),
-  });
+}): Promise<void> {
+  const stmtSelect = db.prepare('SELECT * FROM oauth_sessions WHERE mcp_server_uuid = ?');
+  const existingSession = stmtSelect.get(mcpServerUuid);
 
   if (existingSession) {
-    // Update existing session
-    await db
-      .update(oauthSessionsTable)
-      .set({
-        ...(clientInformation && { client_information: clientInformation }),
-        ...(tokens && { tokens }),
-        ...(codeVerifier && { code_verifier: codeVerifier }),
-        updated_at: new Date(),
-      })
-      .where(eq(oauthSessionsTable.mcp_server_uuid, mcpServerUuid));
+    const updates = [];
+    const params = [];
+    if (clientInformation) {
+      updates.push('client_information = ?');
+      params.push(JSON.stringify(clientInformation));
+    }
+    if (tokens) {
+      updates.push('tokens = ?');
+      params.push(JSON.stringify(tokens));
+    }
+    if (codeVerifier) {
+      updates.push('code_verifier = ?');
+      params.push(codeVerifier);
+    }
+    updates.push('updated_at = ?');
+    params.push(new Date().toISOString());
+
+    if (updates.length > 1) { // at least updated_at will be there
+      const query = `UPDATE oauth_sessions SET ${updates.join(', ')} WHERE mcp_server_uuid = ?`;
+      params.push(mcpServerUuid);
+      const stmtUpdate = db.prepare(query);
+      stmtUpdate.run(...params);
+    }
   } else if (clientInformation) {
-    // Create new session (require client_information for creation)
-    await db.insert(oauthSessionsTable).values({
-      mcp_server_uuid: mcpServerUuid,
-      client_information: clientInformation,
-      ...(tokens && { tokens }),
-      ...(codeVerifier && { code_verifier: codeVerifier }),
-    });
+    const uuid = nanoid();
+    const created_at = new Date().toISOString();
+    const updated_at = created_at;
+    const stmtInsert = db.prepare(
+      'INSERT INTO oauth_sessions (uuid, mcp_server_uuid, client_information, tokens, code_verifier, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)'
+    );
+    stmtInsert.run(
+      uuid,
+      mcpServerUuid,
+      JSON.stringify(clientInformation),
+      tokens ? JSON.stringify(tokens) : null,
+      codeVerifier,
+      created_at,
+      updated_at
+    );
   }
 }
 
-export async function getOAuthSession(mcpServerUuid: string) {
-  return await db.query.oauthSessionsTable.findFirst({
-    where: eq(oauthSessionsTable.mcp_server_uuid, mcpServerUuid),
-  });
+export async function getOAuthSession(mcpServerUuid: string): Promise<OAuthSession | null> {
+  const stmt = db.prepare('SELECT * FROM oauth_sessions WHERE mcp_server_uuid = ?');
+  const session = stmt.get(mcpServerUuid) as any;
+  if (session) {
+    return {
+      ...session,
+      client_information: JSON.parse(session.client_information || '{}'),
+      tokens: session.tokens ? JSON.parse(session.tokens) : null,
+      created_at: new Date(session.created_at),
+      updated_at: new Date(session.updated_at),
+    } as OAuthSession;
+  }
+  return null;
 }

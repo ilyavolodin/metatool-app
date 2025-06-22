@@ -1,20 +1,18 @@
-import { and, eq } from 'drizzle-orm';
+import { nanoid } from 'nanoid';
 import { NextResponse } from 'next/server';
 
+import { ToolExecutionLog } from '@/app/actions/tool-execution-logs'; // Use the existing type
 import { db } from '@/db';
-import {
-  mcpServersTable,
-  toolExecutionLogsTable,
-  ToolExecutionStatus,
-} from '@/db/schema';
+import { ToolExecutionStatus } from '@/db/schema';
 import * as logger from '@/lib/logger';
 
 import { authenticateApiKey } from '../auth';
 
 export async function POST(request: Request) {
   try {
-    const auth = await authenticateApiKey(request);
-    if (auth.error) return auth.error;
+    const authResult = await authenticateApiKey(request);
+    if (authResult.error) return authResult.error;
+    const { activeProfile } = authResult;
 
     const body = await request.json();
     const {
@@ -27,7 +25,6 @@ export async function POST(request: Request) {
       execution_time_ms,
     } = body;
 
-    // Validate required fields
     if (!tool_name) {
       return NextResponse.json(
         { error: 'Tool name is required' },
@@ -35,20 +32,10 @@ export async function POST(request: Request) {
       );
     }
 
-    // If mcp_server_uuid is provided, verify it belongs to the authenticated user's active profile
     if (mcp_server_uuid) {
-      const mcpServer = await db
-        .select()
-        .from(mcpServersTable)
-        .where(
-          and(
-            eq(mcpServersTable.uuid, mcp_server_uuid),
-            eq(mcpServersTable.profile_uuid, auth.activeProfile.uuid)
-          )
-        )
-        .limit(1);
-
-      if (mcpServer.length === 0) {
+      const serverStmt = db.prepare('SELECT uuid FROM mcp_servers WHERE uuid = ? AND profile_uuid = ?');
+      const mcpServer = serverStmt.get(mcp_server_uuid, activeProfile.uuid);
+      if (!mcpServer) {
         return NextResponse.json(
           { error: 'MCP server not found or does not belong to your profile' },
           { status: 404 }
@@ -56,23 +43,38 @@ export async function POST(request: Request) {
       }
     }
 
-    // Create new tool execution log entry
-    const newToolExecutionLog = await db
-      .insert(toolExecutionLogsTable)
-      .values({
-        mcp_server_uuid: mcp_server_uuid || null,
-        tool_name,
-        payload: payload || {},
-        result: result || null,
-        status: status || ToolExecutionStatus.PENDING,
-        error_message: error_message || null,
-        execution_time_ms: execution_time_ms || null,
-      })
-      .returning();
+    const logUuid = nanoid();
+    const createdAt = new Date().toISOString();
 
-    return NextResponse.json(newToolExecutionLog[0]);
+    const stmt = db.prepare(
+      'INSERT INTO tool_execution_logs (id, mcp_server_uuid, tool_name, payload, result, status, error_message, execution_time_ms, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING *'
+    );
+    const newLogData = stmt.get(
+      logUuid,
+      mcp_server_uuid || null,
+      tool_name,
+      JSON.stringify(payload || {}),
+      result ? JSON.stringify(result) : null,
+      status || ToolExecutionStatus.PENDING,
+      error_message || null,
+      execution_time_ms || null,
+      createdAt
+    ) as any;
+
+    if(!newLogData) {
+        throw new Error('Failed to insert tool execution log');
+    }
+
+    const newToolExecutionLog: ToolExecutionLog = {
+        ...newLogData,
+        payload: JSON.parse(newLogData.payload || '{}'),
+        result: newLogData.result ? JSON.parse(newLogData.result) : null,
+        created_at: new Date(newLogData.created_at),
+    };
+
+    return NextResponse.json(newToolExecutionLog);
   } catch (error) {
-    logger.error(error);
+    logger.error('Failed to create tool execution log:', error);
     return NextResponse.json(
       { error: 'Failed to create tool execution log' },
       { status: 500 }

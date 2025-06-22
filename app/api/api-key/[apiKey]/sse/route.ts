@@ -9,14 +9,7 @@ import { metaMcpConnections } from '@/app/lib/types'; // Corrected path
 import * as logger from '@/lib/logger'; // Correct
 // Note: extractApiKey from utils.ts gets it from header, here we get it from path param.
 
-interface ApiKeyRouteContext { // Added interface
-  params: {
-    apiKey: string;
-  };
-}
-
-export async function GET(req: NextRequest, context: ApiKeyRouteContext) { // Changed signature
-  const { params } = context; // Access params
+export async function GET(req: NextRequest, { params }: any) {
   const apiKeyFromPath = params.apiKey;
   const routeName = `/api/api-key/${apiKeyFromPath}/sse`;
   try {
@@ -55,7 +48,7 @@ export async function GET(req: NextRequest, context: ApiKeyRouteContext) { // Ch
       async start(controller) {
         const webAppTransport = new SSEServerTransport(
           // The client will POST messages to /api/api-key/[apiKey]/message?sessionId=...
-          `/api/api-key/${apiKey}/message`,
+          `/api/api-key/${apiKeyFromPath}/message`,
           {
             writeHead: (_status: number, _headers: Record<string, string>) => { // Prefixed unused
               // controller.enqueue(new TextEncoder().encode(`HTTP/1.1 ${status}\r\n`));

@@ -2,13 +2,14 @@ import {
   OAuthClientInformation,
   OAuthTokens,
 } from '@modelcontextprotocol/sdk/shared/auth.js';
-// import { sql } from 'drizzle-orm'; // Will remove if not needed, or keep for '[]' defaults if preferred
+import { sql } from 'drizzle-orm'; // Will remove if not needed, or keep for '[]' defaults if preferred
 import {
   index,
   integer, // Changed from timestamp, jsonb, serial, uuid, pgTable, pgEnum
   sqliteTable, // Changed from pgTable
   text,
   unique,
+  type AnySQLiteColumn,
 } from 'drizzle-orm/sqlite-core'; // Changed from pg-core
 import { nanoid } from 'nanoid'; // For generating IDs
 
@@ -47,6 +48,8 @@ export enum ToolExecutionStatus {
 
 // Removed pgEnum declarations
 
+import type { InferSelectModel } from 'drizzle-orm';
+
 export const projectsTable = sqliteTable('projects', {
   uuid: text('uuid').primaryKey().$defaultFn(() => nanoid()),
   name: text('name').notNull(),
@@ -54,9 +57,11 @@ export const projectsTable = sqliteTable('projects', {
     .notNull()
     .$defaultFn(() => new Date()),
   active_profile_uuid: text('active_profile_uuid').references(
-    () => profilesTable.uuid
+    (): AnySQLiteColumn => profilesTable.uuid
   ),
 });
+
+export type Project = InferSelectModel<typeof projectsTable>;
 
 export const profilesTable = sqliteTable(
   'profiles',
@@ -69,7 +74,7 @@ export const profilesTable = sqliteTable(
     enabled_capabilities: text('enabled_capabilities', { mode: 'json' })
       .$type<ProfileCapability[]>()
       .notNull()
-      .default('[]'),
+      .default(sql`'[]'`),
     // Removed workspace_mode column
     created_at: integer('created_at', { mode: 'timestamp' })
       .notNull()
@@ -77,6 +82,8 @@ export const profilesTable = sqliteTable(
   },
   (table) => [index('profiles_project_uuid_idx').on(table.project_uuid)]
 );
+
+export type Profile = InferSelectModel<typeof profilesTable>;
 
 export const apiKeysTable = sqliteTable(
   'api_keys',
@@ -108,11 +115,11 @@ export const mcpServersTable = sqliteTable(
     args: text('args', { mode: 'json' }) // Store as JSON string
       .$type<string[]>()
       .notNull()
-      .default('[]'),
+      .default(sql`'[]'`),
     env: text('env', { mode: 'json' }) // Store as JSON string
       .$type<{ [key: string]: string }>()
       .notNull()
-      .default('{}'),
+      .default(sql`'{}'`),
     url: text('url'),
     created_at: integer('created_at', { mode: 'timestamp' })
       .notNull()
@@ -175,7 +182,7 @@ export const toolExecutionLogsTable = sqliteTable(
     payload: text('payload', { mode: 'json' }) // Store as JSON string
       .$type<Record<string, any>>()
       .notNull()
-      .default('{}'),
+      .default(sql`'{}'`),
     result: text('result', { mode: 'json' }).$type<any>(), // Store as JSON string
     status: text('status')
       .$type<ToolExecutionStatus>()

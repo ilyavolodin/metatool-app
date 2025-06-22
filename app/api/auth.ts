@@ -1,8 +1,7 @@
-import { eq } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 
 import { db } from '@/db';
-import { apiKeysTable } from '@/db/schema';
+import { ApiKey } from '@/types/api-key'; // Assuming ApiKey type definition
 
 import { getProjectActiveProfile } from '../actions/profiles';
 
@@ -17,21 +16,18 @@ export async function authenticateApiKey(request: Request) {
     };
   }
 
-  const apiKey = authHeader.substring(7).trim(); // Remove 'Bearer ' prefix
-  const apiKeyRecord = await db
-    .select()
-    .from(apiKeysTable)
-    .where(eq(apiKeysTable.api_key, apiKey))
-    .limit(1);
+  const apiKeyString = authHeader.substring(7).trim(); // Remove 'Bearer ' prefix
+  const stmt = db.prepare('SELECT * FROM api_keys WHERE api_key = ?');
+  const apiKeyRecord = stmt.get(apiKeyString) as ApiKey | undefined;
 
-  if (apiKeyRecord.length === 0) {
+  if (!apiKeyRecord) {
     return {
       error: NextResponse.json({ error: 'Invalid API key' }, { status: 401 }),
     };
   }
 
   const activeProfile = await getProjectActiveProfile(
-    apiKeyRecord[0].project_uuid
+    apiKeyRecord.project_uuid
   );
   if (!activeProfile) {
     return {
@@ -44,7 +40,7 @@ export async function authenticateApiKey(request: Request) {
 
   return {
     success: true,
-    apiKey: apiKeyRecord[0],
+    apiKey: apiKeyRecord,
     activeProfile,
   };
 }

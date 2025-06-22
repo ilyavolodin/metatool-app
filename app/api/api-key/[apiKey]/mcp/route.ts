@@ -46,16 +46,9 @@ function createMockResponse(writer: WritableStreamDefaultWriter) {
   } as any;
 }
 
-interface ApiKeyRouteContext {
-  params: {
-    apiKey: string;
-  };
-}
-
-export async function GET(req: NextRequest, context: ApiKeyRouteContext) {
-  const { params } = context; // Access params after this line
+export async function GET(req: NextRequest, { params }: any) {
+  const apiKeyFromPath = params.apiKey;
   try {
-    const apiKeyFromPath = params.apiKey;
     if (!apiKeyFromPath) {
       // This should ideally be caught by Next.js routing if param is mandatory
       logger.warn('API key missing in path for GET /api/api-key/.../mcp');
@@ -87,7 +80,7 @@ export async function GET(req: NextRequest, context: ApiKeyRouteContext) {
     return new NextResponse(readable, { status, headers });
 
   } catch (error) {
-    logger.error(`Error in /api-key/${params.apiKey}/mcp GET route:`, error);
+    logger.error(`Error in /api-key/${apiKeyFromPath}/mcp GET route:`, error);
     return NextResponse.json(
       { error: error instanceof Error ? error.message : String(error) },
       { status: 500 }
@@ -95,9 +88,9 @@ export async function GET(req: NextRequest, context: ApiKeyRouteContext) {
   }
 }
 
-export async function POST(req: NextRequest, { params }: { params: { apiKey: string } }) {
+export async function POST(req: NextRequest, { params }: any) {
+  const apiKeyFromPath = params.apiKey;
   try {
-    const apiKeyFromPath = params.apiKey;
     if (!apiKeyFromPath) {
       logger.warn('API key missing in path for POST /api/api-key/.../mcp');
       return NextResponse.json({ error: 'API key in path is required' }, { status: 400 });
@@ -161,7 +154,7 @@ export async function POST(req: NextRequest, { params }: { params: { apiKey: str
 
           } catch (error) {
             logger.error(`Error creating session-specific backing transport for ${newSessionId} (API key ${apiKeyFromPath} in path):`, error);
-            webAppTransport.send({jsonrpc: "2.0", id: null, error: {code: -32000, message: "Failed to establish full session connection"}})
+            webAppTransport.send({jsonrpc: "2.0", id: '', error: {code: -32000, message: "Failed to establish full session connection"}})
             metaMcpConnections.delete(newSessionId);
             webAppTransport.close().catch(e => logger.error("Error closing web app transport during session init failure", e));
           }

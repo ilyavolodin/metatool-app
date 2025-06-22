@@ -5,7 +5,7 @@ import { metaMcpConnections } from '@/app/lib/types'; // Corrected path
 import * as logger from '@/lib/logger'; // Correct
 // import { extractApiKey } from '@/lib/utils'; // API key is from path param
 
-export async function POST(req: NextRequest, { params }: { params: { apiKey: string } }) {
+export async function POST(req: NextRequest, { params }: any) {
   const apiKeyFromPath = params.apiKey;
   const routeName = `/api/api-key/${apiKeyFromPath}/message`; // For logging context
   try {

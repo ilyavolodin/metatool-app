@@ -1,58 +1,61 @@
 'use server';
 
-import { eq } from 'drizzle-orm';
+import { nanoid } from 'nanoid';
 
 import { db } from '@/db';
-import { profilesTable, projectsTable } from '@/db/schema';
+import { Project } from '@/types'; // Assuming Profile and Project are in types/index.ts or similar
 
-export async function createProject(name: string) {
-  return await db.transaction(async (tx) => {
-    // First create the project with a temporary self-referential UUID
-    const [project] = await tx
-      .insert(projectsTable)
-      .values({
-        name,
-        active_profile_uuid: null,
-      })
-      .returning();
+// Helper to map row to Project, parsing JSON fields if any (none in this schema for Project)
+// and converting date strings to Date objects.
+function mapRowToProject(row: any): Project {
+  return {
+    ...row,
+    created_at: new Date(row.created_at as string),
+  } as Project;
+}
 
-    // Create the profile with the actual project UUID
-    const [profile] = await tx
-      .insert(profilesTable)
-      .values({
-        name: 'Default Workspace',
-        project_uuid: project.uuid,
-        enabled_capabilities: [], // Default mode has no special capabilities
-      })
-      .returning();
 
-    // Update the project with the correct profile UUID
-    const [updatedProject] = await tx
-      .update(projectsTable)
-      .set({ active_profile_uuid: profile.uuid })
-      .where(eq(projectsTable.uuid, project.uuid))
-      .returning();
+export async function createProject(name: string): Promise<Project> {
+  const projectUuid = nanoid();
+  const profileUuid = nanoid();
+  const now = new Date().toISOString();
 
-    return updatedProject;
+  // Use a transaction to ensure atomicity
+  const runTransaction = db.transaction(() => {
+    const insertProjectStmt = db.prepare(
+      'INSERT INTO projects (uuid, name, created_at, active_profile_uuid) VALUES (?, ?, ?, ?) RETURNING *'
+    );
+    // Initially insert with active_profile_uuid as null or pointing to the new profile
+    const newProject = insertProjectStmt.get(projectUuid, name, now, profileUuid);
+
+    if (!newProject) {
+      throw new Error('Failed to create project');
+    }
+
+    const insertProfileStmt = db.prepare(
+      'INSERT INTO profiles (uuid, name, project_uuid, enabled_capabilities, created_at) VALUES (?, ?, ?, ?, ?)'
+    );
+    insertProfileStmt.run(profileUuid, 'Default Workspace', projectUuid, JSON.stringify([]), now);
+
+    return mapRowToProject(newProject);
   });
+
+  return runTransaction();
 }
 
-export async function getProject(projectUuid: string) {
-  const project = await db
-    .select()
-    .from(projectsTable)
-    .where(eq(projectsTable.uuid, projectUuid))
-    .limit(1);
+export async function getProject(projectUuid: string): Promise<Project | null> {
+  const stmt = db.prepare('SELECT * FROM projects WHERE uuid = ?');
+  const project = stmt.get(projectUuid);
 
-  if (project.length === 0) {
-    throw new Error('Project not found');
+  if (!project) {
+    return null;
   }
-
-  return project[0];
+  return mapRowToProject(project);
 }
 
-export async function getProjects() {
-  let projects = await db.select().from(projectsTable);
+export async function getProjects(): Promise<Project[]> {
+  const stmt = db.prepare('SELECT * FROM projects');
+  let projects = stmt.all().map(mapRowToProject);
 
   if (projects.length === 0) {
     const defaultProject = await createProject('Default Project');
@@ -62,59 +65,62 @@ export async function getProjects() {
   return projects;
 }
 
-export async function updateProjectName(projectUuid: string, newName: string) {
-  const project = await db
-    .select()
-    .from(projectsTable)
-    .where(eq(projectsTable.uuid, projectUuid))
-    .limit(1);
+export async function updateProjectName(projectUuid: string, newName: string): Promise<Project> {
+  const stmtGet = db.prepare('SELECT * FROM projects WHERE uuid = ?');
+  const project = stmtGet.get(projectUuid);
 
-  if (project.length === 0) {
+  if (!project) {
     throw new Error('Project not found');
   }
 
-  const updatedProject = await db
-    .update(projectsTable)
-    .set({ name: newName })
-    .where(eq(projectsTable.uuid, projectUuid))
-    .returning();
+  const stmtUpdate = db.prepare('UPDATE projects SET name = ? WHERE uuid = ? RETURNING *');
+  const updatedProject = stmtUpdate.get(newName, projectUuid);
 
-  return updatedProject[0];
+  if (!updatedProject) {
+    // Should not happen if the get above succeeded and DB is consistent
+    throw new Error('Failed to update project name');
+  }
+  return mapRowToProject(updatedProject);
 }
 
-export async function deleteProject(projectUuid: string) {
-  const project = await db
-    .select()
-    .from(projectsTable)
-    .where(eq(projectsTable.uuid, projectUuid))
-    .limit(1);
+export async function deleteProject(projectUuid: string): Promise<{ success: boolean }> {
+  const stmtGet = db.prepare('SELECT * FROM projects WHERE uuid = ?');
+  const project = stmtGet.get(projectUuid);
 
-  if (project.length === 0) {
+  if (!project) {
     throw new Error('Project not found');
   }
 
-  // Check if this is the last project
-  const projectCount = await db.select().from(projectsTable);
+  const stmtProjectCount = db.prepare('SELECT COUNT(*) as count FROM projects');
+  const { count } = stmtProjectCount.get() as { count: number };
 
-  if (projectCount.length === 1) {
+
+  if (count === 1) {
     throw new Error('Cannot delete the last project');
   }
 
-  await db.delete(projectsTable).where(eq(projectsTable.uuid, projectUuid));
+  // Transaction to delete project and its associated profiles
+  const runDeleteTransaction = db.transaction(() => {
+    const stmtDeleteProfiles = db.prepare('DELETE FROM profiles WHERE project_uuid = ?');
+    stmtDeleteProfiles.run(projectUuid);
 
+    const stmtDeleteProject = db.prepare('DELETE FROM projects WHERE uuid = ?');
+    stmtDeleteProject.run(projectUuid);
+  });
+
+  runDeleteTransaction();
   return { success: true };
 }
 
-export async function setActiveProject(projectUuid: string) {
-  const project = await db
-    .select()
-    .from(projectsTable)
-    .where(eq(projectsTable.uuid, projectUuid))
-    .limit(1);
+export async function setActiveProject(projectUuid: string): Promise<Project | null> {
+  // This function seems to imply setting a global "active" project,
+  // which isn't directly supported by the schema in a way that `setProfileActive` was.
+  // For now, it will just fetch the project. Consider if its behavior needs to change.
+  const stmt = db.prepare('SELECT * FROM projects WHERE uuid = ?');
+  const project = stmt.get(projectUuid);
 
-  if (project.length === 0) {
-    throw new Error('Project not found');
+  if (!project) {
+    return null;
   }
-
-  return project[0];
+  return mapRowToProject(project);
 }

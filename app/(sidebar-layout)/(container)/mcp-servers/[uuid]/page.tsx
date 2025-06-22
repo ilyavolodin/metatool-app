@@ -672,7 +672,6 @@ export default function McpServerDetailPage({
       <ToolManagement
         mcpServer={mcpServer}
         hasToolsManagement={hasToolsManagement || false}
-        apiKey={apiKey}
         makeRequest={makeRequest}
       />
 
