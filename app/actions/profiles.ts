@@ -15,7 +15,7 @@ export async function createProfile(
   // Default capabilities for a new profile
   const capabilities: ProfileCapability[] = [];
 
-  const profile = await db
+    const profile = (await db
     .insert(profilesTable)
     .values({
       name,
@@ -23,7 +23,7 @@ export async function createProfile(
       enabled_capabilities: capabilities,
       // workspace_mode removed
     })
-    .returning();
+    .returning()) as (typeof profilesTable.$inferSelect)[];
 
   return profile[0];
 }
@@ -94,14 +94,14 @@ export async function getProjectActiveProfile(currentProjectUuid: string) {
   }
 
   // If no profiles exist, create a default one
-  const defaultProfile = await db
+    const defaultProfile = (await db
     .insert(profilesTable)
     .values({
       name: 'Default Workspace',
       project_uuid: currentProjectUuid,
       enabled_capabilities: [], // Default mode has no special capabilities
     })
-    .returning();
+    .returning()) as (typeof profilesTable.$inferSelect)[];
 
   // Set it as active
   await db
@@ -126,11 +126,11 @@ export async function setProfileActive(
     throw new Error('Project not found');
   }
 
-  const updatedProject = await db
+    const updatedProject = (await db
     .update(projectsTable)
     .set({ active_profile_uuid: profileUuid })
     .where(eq(projectsTable.uuid, projectUuid))
-    .returning();
+    .returning()) as (typeof projectsTable.$inferSelect)[];
 
   if (updatedProject.length === 0) {
     throw new Error('Project not found');
@@ -148,11 +148,11 @@ export async function updateProfileName(profileUuid: string, newName: string) {
     throw new Error('Profile not found');
   }
 
-  const updatedProfile = await db
+    const updatedProfile = (await db
     .update(profilesTable)
     .set({ name: newName })
     .where(eq(profilesTable.uuid, profileUuid))
-    .returning();
+    .returning()) as (typeof profilesTable.$inferSelect)[];
 
   return updatedProfile[0];
 }
@@ -208,11 +208,11 @@ export async function updateProfileCapabilities(
     throw new Error('Profile not found');
   }
 
-  const updatedProfile = await db
+    const updatedProfile = (await db
     .update(profilesTable)
     .set({ enabled_capabilities: capabilities })
     .where(eq(profilesTable.uuid, profileUuid))
-    .returning();
+    .returning()) as (typeof profilesTable.$inferSelect)[];
 
   return updatedProfile[0];
 }

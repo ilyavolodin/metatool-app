@@ -23,10 +23,11 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
-# No external volumes needed for SQLite by default
+    # No external volumes needed for SQLite by default
 # If you want to persist sqlite.db outside the container, you could add a volume mount here:
 # volumes:
 #   metatool_db_data:
 # And in app service:
 #   volumes:
 #     - metatool_db_data:/app/sqlite.db # Assuming sqlite.db is in /app
+

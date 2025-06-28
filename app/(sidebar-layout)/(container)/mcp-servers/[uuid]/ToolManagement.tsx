@@ -23,13 +23,13 @@ interface ToolManagementProps {
         type: McpServerType;
     };
     hasToolsManagement: boolean;
-    // apiKey?: { // apiKey prop removed
-    //     api_key: string;
-    // } | null;
+    apiKey?: { // apiKey prop removed
+        api_key: string;
+    } | null;
     makeRequest: (request: ClientRequest, schema: z.ZodType) => Promise<any>;
 }
 
-export default function ToolManagement({ mcpServer, hasToolsManagement, /* apiKey, */ makeRequest }: ToolManagementProps) { // apiKey destructured but commented
+export default function ToolManagement({ mcpServer, hasToolsManagement, makeRequest }: ToolManagementProps) {
     const router = useRouter();
     const { toast } = useToast();
     const { mutate: mutateTools } = useSWR(

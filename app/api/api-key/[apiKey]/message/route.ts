@@ -1,12 +1,12 @@
 import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse.js';
 import { NextRequest, NextResponse } from 'next/server';
 
-import { metaMcpConnections } from '@/app/lib/types'; // Corrected path
-import * as logger from '@/lib/logger'; // Correct
-// import { extractApiKey } from '@/lib/utils'; // API key is from path param
+import { metaMcpConnections } from '@/app/lib/types';
+import * as logger from '@/lib/logger';
 
-export async function POST(req: NextRequest, { params }: { params: { apiKey: string } }) {
-  const apiKeyFromPath = params.apiKey;
+export async function POST(req: NextRequest, { params }: { params: Promise<{ apiKey: string }> }) {
+  const resolvedParams = await params;
+  const apiKeyFromPath = resolvedParams.apiKey;
   const routeName = `/api/api-key/${apiKeyFromPath}/message`; // For logging context
   try {
     if (!apiKeyFromPath) {

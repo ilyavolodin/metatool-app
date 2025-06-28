@@ -8,30 +8,35 @@ import { profilesTable, projectsTable } from '@/db/schema';
 export async function createProject(name: string) {
   return await db.transaction(async (tx) => {
     // First create the project with a temporary self-referential UUID
+    await tx.insert(projectsTable).values({
+      name,
+      active_profile_uuid: null,
+    });
     const [project] = await tx
-      .insert(projectsTable)
-      .values({
-        name,
-        active_profile_uuid: null,
-      })
-      .returning();
+      .select()
+      .from(projectsTable)
+      .where(eq(projectsTable.name, name));
 
     // Create the profile with the actual project UUID
+    await tx.insert(profilesTable).values({
+      name: 'Default Workspace',
+      project_uuid: project.uuid,
+      enabled_capabilities: [], // Default mode has no special capabilities
+    });
     const [profile] = await tx
-      .insert(profilesTable)
-      .values({
-        name: 'Default Workspace',
-        project_uuid: project.uuid,
-        enabled_capabilities: [], // Default mode has no special capabilities
-      })
-      .returning();
+      .select()
+      .from(profilesTable)
+      .where(eq(profilesTable.project_uuid, project.uuid));
 
     // Update the project with the correct profile UUID
-    const [updatedProject] = await tx
+    await tx
       .update(projectsTable)
       .set({ active_profile_uuid: profile.uuid })
-      .where(eq(projectsTable.uuid, project.uuid))
-      .returning();
+      .where(eq(projectsTable.uuid, project.uuid));
+    const [updatedProject] = await tx
+      .select()
+      .from(projectsTable)
+      .where(eq(projectsTable.uuid, project.uuid));
 
     return updatedProject;
   });
@@ -73,11 +78,11 @@ export async function updateProjectName(projectUuid: string, newName: string) {
     throw new Error('Project not found');
   }
 
-  const updatedProject = await db
+  const updatedProject = (await db
     .update(projectsTable)
     .set({ name: newName })
     .where(eq(projectsTable.uuid, projectUuid))
-    .returning();
+    .returning()) as any[];
 
   return updatedProject[0];
 }

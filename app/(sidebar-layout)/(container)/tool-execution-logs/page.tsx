@@ -15,6 +15,7 @@ import useSWR, { mutate } from 'swr';
 import { getMcpServers } from '@/app/actions/mcp-servers';
 import { updateProfileCapabilities } from '@/app/actions/profiles';
 import { getToolExecutionLogs, getToolNames } from '@/app/actions/tool-execution-logs';
+import { cn } from '@/app/lib/utils'; // Corrected path
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -45,7 +46,6 @@ import { Switch } from '@/components/ui/switch';
 import { ProfileCapability, ToolExecutionStatus } from '@/db/schema';
 import { useProfiles } from '@/hooks/use-profiles';
 import { useToast } from '@/hooks/use-toast';
-import { cn } from '@/app/lib/utils'; // Corrected path
 
 export default function ToolExecutionLogsPage() {
     const { currentProfile, mutateActiveProfile } = useProfiles();

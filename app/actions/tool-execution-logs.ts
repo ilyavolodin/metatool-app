@@ -116,6 +116,7 @@ export async function getToolExecutionLogs({
   return {
     logs: logs.map((log) => ({
       ...log,
+      id: parseInt(log.id as unknown as string, 10),
       mcp_server_name: log.mcp_server_name || 'Unknown Server',
     })) as ToolExecutionLog[],
     total: count,

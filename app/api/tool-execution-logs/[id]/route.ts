@@ -48,7 +48,7 @@ export async function PUT(
     const updatedLog = await db
       .update(toolExecutionLogsTable)
       .set(updateData)
-      .where(eq(toolExecutionLogsTable.id, parseInt(logId)))
+      .where(eq(toolExecutionLogsTable.id, logId))
       .returning();
 
     if (updatedLog.length === 0) {

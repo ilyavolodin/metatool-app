@@ -10,6 +10,7 @@ import {
   text,
   unique,
 } from 'drizzle-orm/sqlite-core'; // Changed from pg-core
+import { relations } from 'drizzle-orm';
 import { nanoid } from 'nanoid'; // For generating IDs
 
 // Enums remain as TypeScript enums
@@ -53,10 +54,15 @@ export const projectsTable = sqliteTable('projects', {
   created_at: integer('created_at', { mode: 'timestamp' })
     .notNull()
     .$defaultFn(() => new Date()),
-  active_profile_uuid: text('active_profile_uuid').references(
-    () => profilesTable.uuid
-  ),
+  active_profile_uuid: text('active_profile_uuid'),
 });
+
+export const projectsTableRelations = relations(projectsTable, ({ one }) => ({
+  active_profile: one(profilesTable, {
+    fields: [projectsTable.active_profile_uuid],
+    references: [profilesTable.uuid],
+  }),
+}));
 
 export const profilesTable = sqliteTable(
   'profiles',
@@ -69,7 +75,7 @@ export const profilesTable = sqliteTable(
     enabled_capabilities: text('enabled_capabilities', { mode: 'json' })
       .$type<ProfileCapability[]>()
       .notNull()
-      .default('[]'),
+      .default([]),
     // Removed workspace_mode column
     created_at: integer('created_at', { mode: 'timestamp' })
       .notNull()
@@ -108,11 +114,11 @@ export const mcpServersTable = sqliteTable(
     args: text('args', { mode: 'json' }) // Store as JSON string
       .$type<string[]>()
       .notNull()
-      .default('[]'),
+      .default([]),
     env: text('env', { mode: 'json' }) // Store as JSON string
       .$type<{ [key: string]: string }>()
       .notNull()
-      .default('{}'),
+      .default({}),
     url: text('url'),
     created_at: integer('created_at', { mode: 'timestamp' })
       .notNull()
@@ -175,7 +181,7 @@ export const toolExecutionLogsTable = sqliteTable(
     payload: text('payload', { mode: 'json' }) // Store as JSON string
       .$type<Record<string, any>>()
       .notNull()
-      .default('{}'),
+      .default({}),
     result: text('result', { mode: 'json' }).$type<any>(), // Store as JSON string
     status: text('status')
       .$type<ToolExecutionStatus>()

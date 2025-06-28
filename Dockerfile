@@ -1,4 +1,4 @@
-FROM node:20-alpine AS base
+FROM node:20-slim AS base
 
 RUN npm i -g corepack@latest
 
@@ -9,9 +9,15 @@ RUN corepack enable && corepack prepare pnpm@10.8.0 --activate
 FROM base AS deps
 WORKDIR /app
 
+# Install build dependencies for native modules
+RUN apt-get update && apt-get install -y python3 build-essential libsqlite3-dev
+
 # Files needed for pnpm install
 COPY package.json pnpm-lock.yaml* ./
 RUN pnpm install --frozen-lockfile
+
+# Remove build dependencies to keep the image small
+RUN apt-get remove -y python3 build-essential libsqlite3-dev && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Rebuild the source code only when needed
 FROM base AS builder
@@ -40,6 +46,9 @@ WORKDIR /app
 
 ENV NODE_ENV production
 ENV NEXT_TELEMETRY_DISABLED 1
+
+# Install runtime dependencies for sqlite3
+RUN apt-get update && apt-get install -y libsqlite3-0 && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs

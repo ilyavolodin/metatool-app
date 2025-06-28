@@ -1,20 +1,39 @@
-// import 'dotenv/config'; // No longer needed if DATABASE_URL is not used for SQLite path
-
-import Database from 'better-sqlite3';
-import { drizzle } from 'drizzle-orm/better-sqlite3';
+import { drizzle } from 'drizzle-orm/sqlite-proxy';
+import { open } from 'sqlite';
+import sqlite3 from 'sqlite3';
 
 import * as schema from './schema';
 
-// Determine the database path. For testing or specific environments,
-// you might use an in-memory database or a different file path.
 const dbPath = process.env.DATABASE_URL || 'sqlite.db';
-// For Vercel deployments, SQLite needs to be in /tmp
-// const dbPath = process.env.VERCEL ? '/tmp/sqlite.db' : (process.env.DATABASE_URL || 'sqlite.db');
 
+const sqliteProxy = async (sql: string, params: any[], method: string) => {
+  const db = await open({
+    filename: dbPath,
+    driver: sqlite3.Database
+  });
 
-const sqlite = new Database(dbPath);
+  try {
+    let result;
+    switch (method) {
+      case 'run':
+        result = await db.run(sql, params);
+        break;
+      case 'get':
+        result = await db.get(sql, params);
+        break;
+      case 'all':
+        result = await db.all(sql, params);
+        break;
+      default:
+        throw new Error(`Unknown method: ${method}`);
+    }
+    return { rows: result };
+  } catch (e) {
+    console.error('Error from sqlite proxy:', e);
+    throw e;
+  } finally {
+    await db.close();
+  }
+};
 
-// Enable WAL mode for better performance and concurrency.
-sqlite.pragma('journal_mode = WAL');
-
-export const db = drizzle(sqlite, { schema });
+export const db = drizzle(sqliteProxy, { schema });

@@ -158,7 +158,7 @@ export async function POST(req: NextRequest) {
             logger.error(`Error creating session-specific backing transport for ${newSessionId}:`, error);
             // Important: If this fails, the client session might be in a weird state.
             // webAppTransport.send an error message to the client?
-            webAppTransport.send({jsonrpc: "2.0", id: null, error: {code: -32000, message: "Failed to establish full session connection"}})
+            webAppTransport.send({jsonrpc: "2.0", id: 0, error: {code: -32000, message: "Failed to establish full session connection"}})
             // Clean up?
             metaMcpConnections.delete(newSessionId);
             webAppTransport.close().catch(e => logger.error("Error closing web app transport during session init failure", e));

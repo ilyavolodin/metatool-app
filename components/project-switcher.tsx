@@ -4,6 +4,7 @@ import { Check, ChevronsUpDown, PlusCircle } from 'lucide-react';
 import * as React from 'react';
 
 import { createProject } from '@/app/actions/projects';
+import { cn } from '@/app/lib/utils'; // Corrected path
 import { Button } from '@/components/ui/button';
 import {
   Command,
@@ -30,7 +31,7 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { useProjects } from '@/hooks/use-projects';
-import { cn } from '@/app/lib/utils'; // Corrected path
+import { Project } from '@/types/project';
 
 export function ProjectSwitcher() {
   const { projects, currentProject, setCurrentProject, mutate } = useProjects();
@@ -47,7 +48,7 @@ export function ProjectSwitcher() {
     try {
       setIsCreating(true);
       const project = await createProject(newProjectName);
-      setCurrentProject(project);
+      setCurrentProject(project as Project);
       setNewProjectName('');
       setShowNewProjectDialog(false);
       mutate();
@@ -84,7 +85,7 @@ export function ProjectSwitcher() {
                     <CommandItem
                       key={project.uuid}
                       onSelect={() => {
-                        setCurrentProject(project);
+                        setCurrentProject(project as Project);
                         setOpen(false);
                       }}
                       className='text-sm'>
