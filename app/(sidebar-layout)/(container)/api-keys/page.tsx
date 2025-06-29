@@ -32,8 +32,8 @@ export default function ApiKeysPage() {
     isLoading,
     mutate,
   } = useSWR(
-    currentProject?.uuid ? `${currentProject?.uuid}/api-keys` : null,
-    () => getProjectApiKeys(currentProject?.uuid || '')
+    currentProject?.id ? `${currentProject?.id}/api-keys` : null,
+    () => getProjectApiKeys(currentProject?.id || '')
   );
   const [revealed, setRevealed] = useState(false);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -61,11 +61,11 @@ export default function ApiKeysPage() {
 
   const handleCreateApiKey = async () => {
     try {
-      if (!currentProject?.uuid) {
+      if (!currentProject?.id) {
         return;
       }
       setIsCreating(true);
-      await createApiKey(currentProject.uuid, newKeyName);
+      await createApiKey(currentProject.id, newKeyName);
       await mutate();
       setIsCreateDialogOpen(false);
       setNewKeyName('');
@@ -86,12 +86,12 @@ export default function ApiKeysPage() {
   };
 
   const handleDeleteApiKey = async () => {
-    if (!currentProject?.uuid || !keyToDelete?.uuid) {
+    if (!currentProject?.id || !keyToDelete?.id) {
       return;
     }
     try {
       setIsDeleting(true);
-      await deleteApiKey(currentProject?.uuid, keyToDelete.uuid);
+      await deleteApiKey(currentProject?.id, keyToDelete.id);
       await mutate();
       setKeyToDelete(null);
       toast({
@@ -116,7 +116,7 @@ export default function ApiKeysPage() {
         <h1 className='text-2xl font-bold'>API Keys</h1>
         <Button
           onClick={() => setIsCreateDialogOpen(true)}
-          disabled={!currentProject?.uuid}>
+          disabled={!currentProject?.id}>
           <Plus className='h-4 w-4 mr-2' />
           Create API Key
         </Button>
@@ -144,13 +144,13 @@ export default function ApiKeysPage() {
             )}
             {apiKeys &&
               apiKeys.map((apiKey) => (
-                <div key={apiKey.uuid} className='space-y-2'>
+                <div key={apiKey.id} className='space-y-2'>
                   {apiKey.name && (
                     <div className='text-sm font-medium'>{apiKey.name}</div>
                   )}
                   <div className='flex items-center gap-2 bg-muted p-3 rounded-lg'>
                     <code className='flex-1 font-mono text-sm'>
-                      {revealed ? apiKey.api_key : maskApiKey(apiKey.api_key)}
+                      {revealed ? apiKey.key : maskApiKey(apiKey.key)}
                     </code>
                     <Button
                       variant='ghost'
@@ -166,7 +166,7 @@ export default function ApiKeysPage() {
                     <Button
                       variant='ghost'
                       size='icon'
-                      onClick={() => copyApiKey(apiKey.api_key)}
+                      onClick={() => copyApiKey(apiKey.key)}
                       title='Copy API key'>
                       <Copy className='h-4 w-4' />
                     </Button>

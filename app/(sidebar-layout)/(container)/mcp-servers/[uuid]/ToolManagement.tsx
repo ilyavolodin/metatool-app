@@ -9,7 +9,7 @@ import { getToolsByMcpServerUuid, saveToolsToDatabase } from "@/app/actions/tool
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 // Removed Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger
-import { McpServerType } from "@/db/schema";
+type McpServerType = 'stdio' | 'sse' | 'streamable_http';
 // import { useProfiles } from "@/hooks/use-profiles";
 import { useToast } from "@/hooks/use-toast";
 import * as logger from "@/lib/logger";

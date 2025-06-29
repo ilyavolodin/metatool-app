@@ -63,15 +63,15 @@ export function ProfileSwitcher() {
     }
 
     try {
-      if (!currentProject?.uuid) {
+      if (!currentProject?.id) {
         return;
       }
       setIsCreating(true);
       const profile = await createProfile(
-        currentProject.uuid,
+        currentProject.id,
         newProfileName.trim()
       );
-      setCurrentProfile(profile);
+      setCurrentProfile(profile as Profile);
       setNewProfileName('');
       setShowNewProfileDialog(false);
       toast({
@@ -116,7 +116,7 @@ export function ProfileSwitcher() {
                 <CommandGroup heading='Workspaces'>
                   {profiles?.map((profile) => (
                     <CommandItem
-                      key={profile.uuid}
+                      key={profile.id}
                       onSelect={() => {
                         setCurrentProfile(profile as Profile);
                         setOpen(false);
@@ -127,7 +127,7 @@ export function ProfileSwitcher() {
                       <Check
                         className={cn(
                           'ml-auto h-4 w-4',
-                          currentProfile?.uuid === profile.uuid
+                          currentProfile?.id === profile.id
                             ? 'opacity-100'
                             : 'opacity-0'
                         )}
@@ -157,7 +157,7 @@ export function ProfileSwitcher() {
         onClick={() => {
           if (!currentProject || !currentProfile) return;
           setIsActivating(true);
-          setProfileActive(currentProject.uuid, currentProfile.uuid).finally(
+          setProfileActive(currentProject.id, currentProfile.id).finally(
             () => {
               mutateActiveProfile();
               setIsActivating(false);
@@ -167,11 +167,11 @@ export function ProfileSwitcher() {
         disabled={
           !currentProject ||
           !currentProfile ||
-          currentProfile.uuid === activeProfile?.uuid
+          currentProfile.id === activeProfile?.id
         }>
         {!currentProject || !currentProfile
           ? 'Loading...'
-          : currentProfile.uuid === activeProfile?.uuid
+          : currentProfile.id === activeProfile?.id
             ? 'Workspace activated'
             : isActivating
               ? 'Activating...'

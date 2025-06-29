@@ -4,7 +4,10 @@ import useSWR from "swr";
 
 import { getToolsByMcpServerUuid, toggleToolStatus } from "@/app/actions/tools";
 import { Switch } from "@/components/ui/switch";
-import { ToggleStatus } from "@/db/schema";
+enum ToggleStatus {
+    ACTIVE = 1,
+    INACTIVE = 0,
+}
 
 interface ToolsListProps {
     mcpServerUuid: string;
@@ -18,7 +21,7 @@ export default function ToolsList({ mcpServerUuid }: ToolsListProps) {
 
     // Calculate enabled vs total tools
     const totalTools = tools?.length || 0;
-    const enabledTools = tools?.filter(tool => tool.status === ToggleStatus.ACTIVE).length || 0;
+    const enabledTools = tools?.filter(tool => tool.isAvailable === ToggleStatus.ACTIVE).length || 0;
 
     const columnHelper = createColumnHelper<any>();
 
@@ -31,13 +34,13 @@ export default function ToolsList({ mcpServerUuid }: ToolsListProps) {
             cell: (info) => info.getValue() || '-',
             header: 'Description',
         }),
-        columnHelper.accessor('status', {
+        columnHelper.accessor('isAvailable', {
             cell: (info) => (
                 <Switch
                     checked={info.getValue() === ToggleStatus.ACTIVE}
                     onCheckedChange={async (checked) => {
                         await toggleToolStatus(
-                            info.row.original.uuid,
+                            info.row.original.id,
                             checked ? ToggleStatus.ACTIVE : ToggleStatus.INACTIVE
                         );
                         mutate();

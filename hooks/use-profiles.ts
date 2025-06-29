@@ -16,8 +16,8 @@ export function useProfiles() {
     error: profilesError,
     isLoading: profilesLoading,
     mutate: mutateProfiles,
-  } = useSWR(currentProject ? `${currentProject.uuid}/profiles` : null, () =>
-    getProfiles(currentProject?.uuid || '')
+  } = useSWR(currentProject ? `${currentProject.id}/profiles` : null, () =>
+    getProfiles(currentProject?.id || '')
   );
 
   const {
@@ -26,18 +26,18 @@ export function useProfiles() {
     error: activeProfileError,
     mutate: mutateActiveProfile,
   } = useSWR(
-    currentProject ? `${currentProject.uuid}/profiles/current` : null,
-    () => getProjectActiveProfile(currentProject?.uuid || '')
+    currentProject?.id ? `${currentProject.id}/profiles/current` : null,
+    () => getProjectActiveProfile(currentProject!.id)
   );
 
   const [currentProfile, setCurrentProfile] = useState<Profile | null>(null);
 
   // Load saved profile on mount
   useEffect(() => {
-    const savedProfileUuid = localStorage.getItem(CURRENT_PROFILE_KEY);
+    const savedProfileId = localStorage.getItem(CURRENT_PROFILE_KEY);
     if (profiles?.length) {
-      if (savedProfileUuid) {
-        const savedProfile = profiles.find((p) => p.uuid === savedProfileUuid);
+      if (savedProfileId) {
+        const savedProfile = profiles.find((p) => p.id === savedProfileId);
         if (savedProfile) {
           setCurrentProfile(savedProfile);
           return;
@@ -53,7 +53,7 @@ export function useProfiles() {
     setCurrentProfile(profile);
 
     if (profile) {
-      localStorage.setItem(CURRENT_PROFILE_KEY, profile.uuid);
+      localStorage.setItem(CURRENT_PROFILE_KEY, profile.id);
     } else {
       localStorage.removeItem(CURRENT_PROFILE_KEY);
     }
@@ -67,6 +67,6 @@ export function useProfiles() {
     isLoading: profilesLoading || activeProfileLoading,
     error: profilesError || activeProfileError,
     mutateProfiles,
-    mutateActiveProfile,
+    mutateActiveProfile
   };
 }

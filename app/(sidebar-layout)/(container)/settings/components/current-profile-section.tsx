@@ -36,7 +36,7 @@ export function CurrentProfileSection() {
     if (newName.trim() === '') return;
     setIsLoading(true);
     try {
-      await updateProfileName(currentProfile.uuid, newName.trim());
+      await updateProfileName(currentProfile.id, newName.trim());
       await mutateProfiles();
       setIsEditing(false);
       toast({
@@ -68,7 +68,7 @@ export function CurrentProfileSection() {
 
     setIsLoading(true);
     try {
-      await deleteProfile(currentProfile.uuid);
+      await deleteProfile(currentProfile.id);
       setCurrentProfile(null);
       await mutateProfiles();
       toast({

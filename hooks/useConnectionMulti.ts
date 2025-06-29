@@ -10,6 +10,12 @@ import { useEffect, useRef, useState } from 'react';
 import { z } from 'zod';
 
 import { getMcpServerByUuid } from '@/app/actions/mcp-servers';
+
+enum McpServerType {
+  STDIO = 'stdio',
+  SSE = 'sse',
+  STREAMABLE_HTTP = 'streamable_http',
+}
 import { useProfiles } from '@/hooks/use-profiles';
 import { useToast } from '@/hooks/use-toast';
 import { ConnectionStatus, SESSION_KEYS } from '@/lib/constants';
@@ -76,14 +82,14 @@ export function useConnectionMulti({
     error: unknown,
     serverUrl: string
   ) => {
-    const authProvider = createAuthProvider(serverUuid, currentProfile?.uuid);
+    const authProvider = createAuthProvider(serverUuid, currentProfile?.id);
 
     const errorCode = (error as any)?.code ?? (error as any)?.status;
     if (errorCode === 401) {
       sessionStorage.setItem(SESSION_KEYS.SERVER_URL, serverUrl || '');
       sessionStorage.setItem(SESSION_KEYS.MCP_SERVER_UUID, serverUuid);
-      if (currentProfile?.uuid) {
-        sessionStorage.setItem(SESSION_KEYS.PROFILE_UUID, currentProfile.uuid);
+      if (currentProfile?.id) {
+        sessionStorage.setItem(SESSION_KEYS.PROFILE_ID, currentProfile.id);
       }
 
       const result = await auth(authProvider, {
@@ -97,7 +103,7 @@ export function useConnectionMulti({
 
   // Connect to a specific server
   const connect = async (serverUuid: string): Promise<void> => {
-    if (!currentProfile?.uuid) {
+    if (!currentProfile?.id) {
       toast({
         title: 'Error',
         description: 'Profile information is missing',
@@ -108,7 +114,7 @@ export function useConnectionMulti({
     }
 
     // Get server details
-    const mcpServer = await getMcpServerByUuid(currentProfile.uuid, serverUuid);
+    const mcpServer = await getMcpServerByUuid(currentProfile.id, serverUuid);
     if (!mcpServer) {
       toast({
         title: 'Error',
@@ -159,7 +165,7 @@ export function useConnectionMulti({
 
     try {
       // Get auth provider
-      const authProvider = createAuthProvider(serverUuid, currentProfile.uuid);
+      const authProvider = createAuthProvider(serverUuid, currentProfile?.id);
 
       // Prepare auth headers
       const headers: HeadersInit = {};

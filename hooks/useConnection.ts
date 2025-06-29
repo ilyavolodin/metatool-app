@@ -28,7 +28,7 @@ import useSWR from 'swr';
 import { z } from 'zod';
 
 import { getMcpServerByUuid } from '@/app/actions/mcp-servers';
-import { McpServerType } from '@/db/schema';
+type McpServerType = 'stdio' | 'sse' | 'streamable_http';
 import { useToast } from '@/hooks/use-toast';
 import { ConnectionStatus, SESSION_KEYS } from '@/lib/constants';
 import * as logger from '@/lib/logger';
@@ -42,7 +42,7 @@ import { McpServer } from '@/types/mcp-server';
 
 interface UseConnectionOptions {
   mcpServerUuid: string;
-  currentProfileUuid?: string;
+  currentProfileId?: string;
   bearerToken?: string;
   onNotification?: (notification: Notification) => void;
   onStdErrNotification?: (notification: Notification) => void;
@@ -52,14 +52,14 @@ interface UseConnectionOptions {
 
 export function useConnection({
   mcpServerUuid,
-  currentProfileUuid,
+  currentProfileId,
   bearerToken: providedBearerToken,
   onNotification,
   onStdErrNotification,
   onPendingRequest,
   getRoots,
 }: UseConnectionOptions) {
-  const authProvider = createAuthProvider(mcpServerUuid, currentProfileUuid);
+  const authProvider = createAuthProvider(mcpServerUuid, currentProfileId);
   const [connectionStatus, setConnectionStatus] =
     useState<ConnectionStatus>('disconnected');
   const { toast } = useToast();
@@ -78,10 +78,10 @@ export function useConnection({
 
   // Fetch MCP server data using SWR
   const { data: mcpServer } = useSWR<McpServer | undefined>(
-    mcpServerUuid && currentProfileUuid
-      ? ['getMcpServerByUuid', mcpServerUuid, currentProfileUuid]
+    mcpServerUuid && currentProfileId
+      ? ['getMcpServerByUuid', mcpServerUuid, currentProfileId]
       : null,
-    () => getMcpServerByUuid(currentProfileUuid || '', mcpServerUuid)
+    () => getMcpServerByUuid(currentProfileId || '', mcpServerUuid)
   );
 
   const pushHistory = (request: object, response?: object) => {
@@ -254,8 +254,8 @@ export function useConnection({
     if (errorCode === 401) {
       sessionStorage.setItem(SESSION_KEYS.SERVER_URL, mcpServer?.url || '');
       sessionStorage.setItem(SESSION_KEYS.MCP_SERVER_UUID, mcpServerUuid);
-      if (currentProfileUuid) {
-        sessionStorage.setItem(SESSION_KEYS.PROFILE_UUID, currentProfileUuid);
+      if (currentProfileId) {
+        sessionStorage.setItem(SESSION_KEYS.PROFILE_ID, currentProfileId);
       }
 
       const result = await auth(authProvider, {
@@ -279,7 +279,7 @@ export function useConnection({
     }
 
     setConnectionStatus(
-      mcpServer.type === McpServerType.STDIO ? 'starting' : 'connecting'
+      mcpServer.type === 'stdio' ? 'starting' : 'connecting'
     );
 
     logger.log('Connecting to MCP server', mcpServerUuid);

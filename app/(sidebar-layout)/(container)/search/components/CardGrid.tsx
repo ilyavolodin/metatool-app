@@ -31,7 +31,11 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { McpServerType } from '@/db/schema';
+enum McpServerType {
+  STDIO = 'stdio',
+  SSE = 'sse',
+  STREAMABLE_HTTP = 'streamable_http',
+}
 import { useProfiles } from '@/hooks/use-profiles';
 import { SearchIndex } from '@/types/search';
 
@@ -64,11 +68,11 @@ function AddMcpServerDialog({
   }, [defaultValues, form]);
 
   const onSubmit = async (values: typeof defaultValues) => {
-    if (!currentProfile?.uuid) return;
+    if (!currentProfile?.id) return;
 
     setIsSubmitting(true);
     try {
-      await createMcpServer(currentProfile.uuid, {
+      await createMcpServer(currentProfile.id, {
         name: values.name,
         description: values.description,
         command: values.command,

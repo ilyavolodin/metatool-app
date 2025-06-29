@@ -1,25 +1,25 @@
 'use server';
 
-import { and, desc, eq, inArray, sql } from 'drizzle-orm';
+import { getDb } from '@/db';
+import { nanoid } from 'nanoid';
 
-import { db } from '@/db';
-import {
-  mcpServersTable,
-  toolExecutionLogsTable,
-  ToolExecutionStatus,
-} from '@/db/schema';
+enum ToolExecutionStatus {
+  SUCCESS = 'success',
+  ERROR = 'error',
+  PENDING = 'pending',
+}
 
 export type ToolExecutionLog = {
   id: number;
-  mcp_server_uuid: string | null;
-  tool_name: string;
+  mcpServerUuid: string | null;
+  toolName: string;
   payload: Record<string, any>;
   result: any;
   status: ToolExecutionStatus;
-  error_message: string | null;
-  execution_time_ms: string | null;
-  created_at: Date;
-  mcp_server_name?: string;
+  errorMessage: string | null;
+  executionTimeMs: string | null;
+  createdAt: Date;
+  mcpServerName?: string;
 };
 
 type GetToolExecutionLogsOptions = {
@@ -42,115 +42,146 @@ export async function getToolExecutionLogs({
   logs: ToolExecutionLog[];
   total: number;
 }> {
-  // Return early if no profile UUID is provided
-  if (!currentProfileUuid) {
-    return { logs: [], total: 0 };
-  }
+  const db = await getDb();
+  try {
+    if (!currentProfileUuid) {
+      return { logs: [], total: 0 };
+    }
 
-  // Build the where conditions
-  const whereConditions = [];
+    const whereConditions: string[] = [];
+    const params: any[] = [];
 
-  // Filter by MCP servers that belong to the current profile
-  const allowedMcpServers = await db
-    .select({ uuid: mcpServersTable.uuid })
-    .from(mcpServersTable)
-    .where(eq(mcpServersTable.profile_uuid, currentProfileUuid));
-
-  const allowedMcpServerUuids = allowedMcpServers.map((server) => server.uuid);
-
-  if (allowedMcpServerUuids.length > 0) {
-    whereConditions.push(
-      inArray(toolExecutionLogsTable.mcp_server_uuid, allowedMcpServerUuids)
+    // Filter by MCP servers that belong to the current profile
+    const allowedMcpServers = await db.all(
+      `SELECT uuid FROM mcp_servers WHERE projectId = ?;`,
+      currentProfileUuid
     );
-  }
+    const allowedMcpServerUuids = allowedMcpServers.map((server) => server.uuid);
 
-  // Apply additional filters if provided
-  if (mcpServerUuids && mcpServerUuids.length > 0) {
-    whereConditions.push(
-      inArray(toolExecutionLogsTable.mcp_server_uuid, mcpServerUuids)
+    if (allowedMcpServerUuids.length > 0) {
+      whereConditions.push(`mcpServerUuid IN (${allowedMcpServerUuids.map(() => '?').join(',')})`);
+      params.push(...allowedMcpServerUuids);
+    } else {
+      // If no allowed servers, no logs can be fetched
+      return { logs: [], total: 0 };
+    }
+
+    // Apply additional filters if provided
+    if (mcpServerUuids && mcpServerUuids.length > 0) {
+      whereConditions.push(`mcpServerUuid IN (${mcpServerUuids.map(() => '?').join(',')})`);
+      params.push(...mcpServerUuids);
+    }
+
+    if (toolNames && toolNames.length > 0) {
+      whereConditions.push(`toolName IN (${toolNames.map(() => '?').join(',')})`);
+      params.push(...toolNames);
+    }
+
+    if (statuses && statuses.length > 0) {
+      whereConditions.push(`status IN (${statuses.map(() => '?').join(',')})`);
+      params.push(...statuses);
+    }
+
+    const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : '';
+
+    // Get total count
+    const totalResult = await db.get(`SELECT COUNT(*) as count FROM tool_execution_logs ${whereClause};`, ...params);
+    const count = totalResult ? totalResult.count : 0;
+
+    // Get logs with joined MCP server names
+    const logs = await db.all(
+      `SELECT
+        tel.id,
+        tel.mcpServerUuid,
+        tel.toolName,
+        tel.input AS payload,
+        tel.output AS result,
+        tel.status,
+        tel.errorMessage,
+        tel.executionTimeMs,
+        tel.timestamp AS createdAt,
+        ms.name AS mcpServerName
+      FROM tool_execution_logs tel
+      LEFT JOIN mcp_servers ms ON tel.mcpServerUuid = ms.uuid
+      ${whereClause}
+      ORDER BY tel.timestamp DESC
+      LIMIT ? OFFSET ?;`,
+      ...params,
+      limit,
+      offset
     );
+
+    return {
+      logs: logs.map((log: any) => ({
+        id: log.id,
+        mcpServerUuid: log.mcpServerUuid,
+        toolName: log.toolName,
+        payload: JSON.parse(log.payload || '{}'),
+        result: JSON.parse(log.result || '{}'),
+        status: log.status,
+        errorMessage: log.errorMessage,
+        executionTimeMs: log.executionTimeMs,
+        createdAt: new Date(log.createdAt),
+        mcpServerName: log.mcpServerName || 'Unknown Server',
+      })) as ToolExecutionLog[],
+      total: count,
+    };
+  } finally {
+    await db.close();
   }
-
-  if (toolNames && toolNames.length > 0) {
-    whereConditions.push(inArray(toolExecutionLogsTable.tool_name, toolNames));
-  }
-
-  if (statuses && statuses.length > 0) {
-    whereConditions.push(inArray(toolExecutionLogsTable.status, statuses));
-  }
-
-  // Combine all conditions with AND
-  const whereClause =
-    whereConditions.length > 0 ? and(...whereConditions) : undefined;
-
-  // Get total count
-  const [{ count }] = await db
-    .select({ count: sql<number>`count(*)` })
-    .from(toolExecutionLogsTable)
-    .where(whereClause);
-
-  // Get logs with joined MCP server names
-  const logs = await db
-    .select({
-      id: toolExecutionLogsTable.id,
-      mcp_server_uuid: toolExecutionLogsTable.mcp_server_uuid,
-      tool_name: toolExecutionLogsTable.tool_name,
-      payload: toolExecutionLogsTable.payload,
-      result: toolExecutionLogsTable.result,
-      status: toolExecutionLogsTable.status,
-      error_message: toolExecutionLogsTable.error_message,
-      execution_time_ms: toolExecutionLogsTable.execution_time_ms,
-      created_at: toolExecutionLogsTable.created_at,
-      mcp_server_name: mcpServersTable.name,
-    })
-    .from(toolExecutionLogsTable)
-    .leftJoin(
-      mcpServersTable,
-      eq(toolExecutionLogsTable.mcp_server_uuid, mcpServersTable.uuid)
-    )
-    .where(whereClause)
-    .orderBy(desc(toolExecutionLogsTable.id))
-    .limit(limit)
-    .offset(offset);
-
-  return {
-    logs: logs.map((log) => ({
-      ...log,
-      id: parseInt(log.id as unknown as string, 10),
-      mcp_server_name: log.mcp_server_name || 'Unknown Server',
-    })) as ToolExecutionLog[],
-    total: count,
-  };
 }
 
 export async function getToolNames(
   currentProfileUuid: string
 ): Promise<string[]> {
-  // Return empty array if profile UUID is empty
-  if (!currentProfileUuid) {
-    return [];
+  const db = await getDb();
+  try {
+    if (!currentProfileUuid) {
+      return [];
+    }
+
+    const allowedMcpServers = await db.all(
+      `SELECT uuid FROM mcp_servers WHERE projectId = ?;`,
+      currentProfileUuid
+    );
+    const allowedMcpServerUuids = allowedMcpServers.map((server) => server.uuid);
+
+    if (allowedMcpServerUuids.length === 0) {
+      return [];
+    }
+
+    const toolNames = await db.all(
+      `SELECT DISTINCT toolName FROM tool_execution_logs WHERE mcpServerUuid IN (${allowedMcpServerUuids.map(() => '?').join(',')}) ORDER BY toolName;`,
+      ...allowedMcpServerUuids
+    );
+
+    return toolNames.map((row: any) => row.toolName);
+  } finally {
+    await db.close();
   }
+}
 
-  // Get allowed MCP servers
-  const allowedMcpServers = await db
-    .select({ uuid: mcpServersTable.uuid })
-    .from(mcpServersTable)
-    .where(eq(mcpServersTable.profile_uuid, currentProfileUuid));
-
-  const allowedMcpServerUuids = allowedMcpServers.map((server) => server.uuid);
-
-  if (allowedMcpServerUuids.length === 0) {
-    return [];
+export async function saveToolExecutionLog(
+  log: Omit<ToolExecutionLog, 'id' | 'createdAt' | 'mcpServerName'> & { projectId: string }
+): Promise<void> {
+  const db = await getDb();
+  try {
+    await db.run(
+      `INSERT INTO tool_execution_logs (
+        id, mcpServerUuid, toolName, input, output, status, errorMessage, executionTimeMs, timestamp, projectId
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
+      nanoid(),
+      log.mcpServerUuid,
+      log.toolName,
+      JSON.stringify(log.payload),
+      JSON.stringify(log.result),
+      log.status,
+      log.errorMessage,
+      log.executionTimeMs,
+      Date.now(),
+      log.projectId
+    );
+  } finally {
+    await db.close();
   }
-
-  // Get unique tool names
-  const result = await db
-    .selectDistinct({ tool_name: toolExecutionLogsTable.tool_name })
-    .from(toolExecutionLogsTable)
-    .where(
-      inArray(toolExecutionLogsTable.mcp_server_uuid, allowedMcpServerUuids)
-    )
-    .orderBy(toolExecutionLogsTable.tool_name);
-
-  return result.map((r) => r.tool_name);
 }

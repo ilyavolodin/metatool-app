@@ -31,7 +31,7 @@ export function CurrentProjectSection() {
     if (newName.trim() === '') return;
     setIsLoading(true);
     try {
-      await updateProjectName(currentProject.uuid, newName.trim());
+      await updateProjectName(currentProject.id, newName.trim());
       await mutate();
       setIsEditing(false);
       toast({
@@ -63,7 +63,7 @@ export function CurrentProjectSection() {
 
     setIsLoading(true);
     try {
-      await deleteProject(currentProject.uuid);
+      await deleteProject(currentProject.id);
       setCurrentProject(null);
       await mutate();
       toast({

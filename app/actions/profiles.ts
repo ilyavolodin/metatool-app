@@ -1,218 +1,299 @@
 'use server';
 
-import { eq } from 'drizzle-orm';
+import { nanoid } from 'nanoid';
 
-import { db } from '@/db';
-// Removed WorkspaceMode from import
-import { ProfileCapability, profilesTable } from '@/db/schema';
-import { projectsTable } from '@/db/schema';
+import { getDb } from '@/db';
+
+enum ProfileCapability {
+  TOOLS_MANAGEMENT = 'tools_management',
+  API_KEY_MANAGEMENT = 'api_key_management',
+  PROJECT_MANAGEMENT = 'project_management',
+  PROFILE_MANAGEMENT = 'profile_management',
+  TOOL_LOGS = 'tool_logs',
+}
 
 export async function createProfile(
-  currentProjectUuid: string,
+  projectId: string,
   name: string
-  // mode parameter removed, assuming default capabilities for all new profiles
 ) {
-  // Default capabilities for a new profile
-  const capabilities: ProfileCapability[] = [];
+  const db = await getDb();
+  try {
+    const id = nanoid();
+    const capabilities: ProfileCapability[] = [];
 
-    const profile = (await db
-    .insert(profilesTable)
-    .values({
+    await db.run(
+      `INSERT INTO profiles (id, name, projectId, capabilities) VALUES (?, ?, ?, ?);`,
+      id,
       name,
-      project_uuid: currentProjectUuid,
-      enabled_capabilities: capabilities,
-      // workspace_mode removed
-    })
-    .returning()) as (typeof profilesTable.$inferSelect)[];
+      projectId,
+      JSON.stringify(capabilities)
+    );
 
-  return profile[0];
-}
-
-export async function getProfile(profileUuid: string) {
-  const profile = await db
-    .select()
-    .from(profilesTable)
-    .where(eq(profilesTable.uuid, profileUuid))
-    .limit(1);
-
-  if (profile.length === 0) {
-    throw new Error('Profile not found');
+    const profile = await db.get(
+      `SELECT id, name, projectId, capabilities FROM profiles WHERE id = ?;`,
+      id
+    );
+    return {
+      ...profile,
+      capabilities: JSON.parse(profile.capabilities),
+    };
+  } finally {
+    await db.close();
   }
-
-  return profile[0];
 }
 
-export async function getProfiles(currentProjectUuid: string) {
-  const profiles = await db
-    .select()
-    .from(profilesTable)
-    .where(eq(profilesTable.project_uuid, currentProjectUuid));
+export async function getProfile(profileId: string) {
+  const db = await getDb();
+  try {
+    const profile = await db.get(
+      `SELECT id, name, projectId, capabilities FROM profiles WHERE id = ? LIMIT 1;`,
+      profileId
+    );
 
-  return profiles;
-}
-
-export async function getProjectActiveProfile(currentProjectUuid: string) {
-  const project = await db
-    .select()
-    .from(projectsTable)
-    .where(eq(projectsTable.uuid, currentProjectUuid))
-    .limit(1);
-
-  if (project.length === 0) {
-    throw new Error('Project not found');
-  }
-
-  const currentProject = project[0];
-
-  // Try to get active profile if set
-  if (currentProject.active_profile_uuid) {
-    const activeProfile = await db
-      .select()
-      .from(profilesTable)
-      .where(eq(profilesTable.uuid, currentProject.active_profile_uuid))
-      .limit(1);
-
-    if (activeProfile.length > 0) {
-      return activeProfile[0];
+    if (!profile) {
+      throw new Error('Profile not found');
     }
+
+    return {
+      ...profile,
+      capabilities: JSON.parse(profile.capabilities),
+    };
+  } finally {
+    await db.close();
   }
+}
 
-  // If no active profile or not found, get all profiles
-  const profiles = await db
-    .select()
-    .from(profilesTable)
-    .where(eq(profilesTable.project_uuid, currentProjectUuid));
+export async function getProfiles(projectId: string) {
+  const db = await getDb();
+  try {
+    const profiles = await db.all(
+      `SELECT id, name, projectId, capabilities FROM profiles WHERE projectId = ?;`,
+      projectId
+    );
 
-  // If there are profiles, use the first one and set it as active
-  if (profiles.length > 0) {
-    await db
-      .update(projectsTable)
-      .set({ active_profile_uuid: profiles[0].uuid })
-      .where(eq(projectsTable.uuid, currentProjectUuid));
-
-    return profiles[0];
+    return profiles.map((profile: any) => ({
+      ...profile,
+      capabilities: JSON.parse(profile.capabilities),
+    }));
+  } finally {
+    await db.close();
   }
+}
 
-  // If no profiles exist, create a default one
-    const defaultProfile = (await db
-    .insert(profilesTable)
-    .values({
-      name: 'Default Workspace',
-      project_uuid: currentProjectUuid,
-      enabled_capabilities: [], // Default mode has no special capabilities
-    })
-    .returning()) as (typeof profilesTable.$inferSelect)[];
+export async function getProjectActiveProfile(projectId: string) {
+  const db = await getDb();
+  try {
+    const project = await db.get(
+      `SELECT id, name, activeProfileId FROM projects WHERE id = ? LIMIT 1;`,
+      projectId
+    );
 
-  // Set it as active
-  await db
-    .update(projectsTable)
-    .set({ active_profile_uuid: defaultProfile[0].uuid })
-    .where(eq(projectsTable.uuid, currentProjectUuid));
+    if (!project) {
+      throw new Error('Project not found');
+    }
 
-  return defaultProfile[0];
+    let activeProfile = null;
+
+    if (project.activeProfileId) {
+      activeProfile = await db.get(
+        `SELECT id, name, projectId, capabilities FROM profiles WHERE id = ? LIMIT 1;`,
+        project.activeProfileId
+      );
+    }
+
+    if (activeProfile) {
+      return {
+        ...activeProfile,
+        capabilities: JSON.parse(activeProfile.capabilities),
+      };
+    }
+
+    const profiles = await db.all(
+      `SELECT id, name, projectId, capabilities FROM profiles WHERE projectId = ?;`,
+      projectId
+    );
+
+    if (profiles.length > 0) {
+      const firstProfile = profiles[0];
+      await db.run(
+        `UPDATE projects SET activeProfileId = ? WHERE id = ?;`,
+        firstProfile.id,
+        projectId
+      );
+      return {
+        ...firstProfile,
+        capabilities: JSON.parse(firstProfile.capabilities),
+      };
+    }
+
+    const defaultProfileId = nanoid();
+    const defaultCapabilities: ProfileCapability[] = [];
+    await db.run(
+      `INSERT INTO profiles (id, name, projectId, capabilities) VALUES (?, ?, ?, ?);`,
+      defaultProfileId,
+      'Default Workspace',
+      projectId,
+      JSON.stringify(defaultCapabilities)
+    );
+
+    await db.run(
+      `UPDATE projects SET activeProfileId = ? WHERE id = ?;`,
+      defaultProfileId,
+      projectId
+    );
+
+    const newDefaultProfile = await db.get(
+      `SELECT id, name, projectId, capabilities FROM profiles WHERE id = ?;`,
+      defaultProfileId
+    );
+
+    return {
+      ...newDefaultProfile,
+      capabilities: JSON.parse(newDefaultProfile.capabilities),
+    };
+  } finally {
+    await db.close();
+  }
 }
 
 export async function setProfileActive(
-  projectUuid: string,
-  profileUuid: string
+  projectId: string,
+  profileId: string
 ) {
-  const project = await db
-    .select()
-    .from(projectsTable)
-    .where(eq(projectsTable.uuid, projectUuid))
-    .limit(1);
+  const db = await getDb();
+  try {
+    const project = await db.get(
+      `SELECT id FROM projects WHERE id = ? LIMIT 1;`,
+      projectId
+    );
 
-  if (project.length === 0) {
-    throw new Error('Project not found');
-  }
+    if (!project) {
+      throw new Error('Project not found');
+    }
 
-    const updatedProject = (await db
-    .update(projectsTable)
-    .set({ active_profile_uuid: profileUuid })
-    .where(eq(projectsTable.uuid, projectUuid))
-    .returning()) as (typeof projectsTable.$inferSelect)[];
-
-  if (updatedProject.length === 0) {
-    throw new Error('Project not found');
+    await db.run(
+      `UPDATE projects SET activeProfileId = ? WHERE id = ?;`,
+      profileId,
+      projectId
+    );
+  } finally {
+    await db.close();
   }
 }
 
-export async function updateProfileName(profileUuid: string, newName: string) {
-  const profile = await db
-    .select()
-    .from(profilesTable)
-    .where(eq(profilesTable.uuid, profileUuid))
-    .limit(1);
+export async function updateProfileName(profileId: string, newName: string) {
+  const db = await getDb();
+  try {
+    const profile = await db.get(
+      `SELECT id FROM profiles WHERE id = ? LIMIT 1;`,
+      profileId
+    );
 
-  if (profile.length === 0) {
-    throw new Error('Profile not found');
+    if (!profile) {
+      throw new Error('Profile not found');
+    }
+
+    await db.run(
+      `UPDATE profiles SET name = ? WHERE id = ?;`,
+      newName,
+      profileId
+    );
+
+    const updatedProfile = await db.get(
+      `SELECT id, name, projectId, capabilities FROM profiles WHERE id = ?;`,
+      profileId
+    );
+
+    return {
+      ...updatedProfile,
+      capabilities: JSON.parse(updatedProfile.capabilities),
+    };
+  } finally {
+    await db.close();
   }
-
-    const updatedProfile = (await db
-    .update(profilesTable)
-    .set({ name: newName })
-    .where(eq(profilesTable.uuid, profileUuid))
-    .returning()) as (typeof profilesTable.$inferSelect)[];
-
-  return updatedProfile[0];
 }
 
-export async function deleteProfile(profileUuid: string) {
-  const profile = await db
-    .select()
-    .from(profilesTable)
-    .where(eq(profilesTable.uuid, profileUuid))
-    .limit(1);
+export async function deleteProfile(profileId: string) {
+  const db = await getDb();
+  try {
+    const profile = await db.get(
+      `SELECT id, projectId FROM profiles WHERE id = ? LIMIT 1;`,
+      profileId
+    );
 
-  if (profile.length === 0) {
-    throw new Error('Profile not found');
+    if (!profile) {
+      throw new Error('Profile not found');
+    }
+
+    const profileCount = await db.get(
+      `SELECT COUNT(*) as count FROM profiles WHERE projectId = ?;`,
+      profile.projectId
+    );
+
+    if (profileCount.count === 1) {
+      throw new Error('Cannot delete the last profile in a project.');
+    }
+
+    await db.run(`DELETE FROM profiles WHERE id = ?;`, profileId);
+
+    return { success: true };
+  } finally {
+    await db.close();
   }
-
-  // Check if this is the last profile
-  const profileCount = await db.select().from(profilesTable);
-
-  if (profileCount.length === 1) {
-    throw new Error('Cannot delete the last profile');
-  }
-
-  await db.delete(profilesTable).where(eq(profilesTable.uuid, profileUuid));
-
-  return { success: true };
 }
 
-export async function setActiveProfile(profileUuid: string) {
-  const profile = await db
-    .select()
-    .from(profilesTable)
-    .where(eq(profilesTable.uuid, profileUuid))
-    .limit(1);
+export async function setActiveProfile(profileId: string) {
+  const db = await getDb();
+  try {
+    const profile = await db.get(
+      `SELECT id, name, projectId, capabilities FROM profiles WHERE id = ? LIMIT 1;`,
+      profileId
+    );
 
-  if (profile.length === 0) {
-    throw new Error('Profile not found');
+    if (!profile) {
+      throw new Error('Profile not found');
+    }
+
+    return {
+      ...profile,
+      capabilities: JSON.parse(profile.capabilities),
+    };
+  } finally {
+    await db.close();
   }
-
-  return profile[0];
 }
 
 export async function updateProfileCapabilities(
-  profileUuid: string,
+  profileId: string,
   capabilities: ProfileCapability[]
 ) {
-  const profile = await db
-    .select()
-    .from(profilesTable)
-    .where(eq(profilesTable.uuid, profileUuid))
-    .limit(1);
+  const db = await getDb();
+  try {
+    const profile = await db.get(
+      `SELECT id FROM profiles WHERE id = ? LIMIT 1;`,
+      profileId
+    );
 
-  if (profile.length === 0) {
-    throw new Error('Profile not found');
+    if (!profile) {
+      throw new Error('Profile not found');
+    }
+
+    await db.run(
+      `UPDATE profiles SET capabilities = ? WHERE id = ?;`,
+      JSON.stringify(capabilities),
+      profileId
+    );
+
+    const updatedProfile = await db.get(
+      `SELECT id, name, projectId, capabilities FROM profiles WHERE id = ?;`,
+      profileId
+    );
+
+    return {
+      ...updatedProfile,
+      capabilities: JSON.parse(updatedProfile.capabilities),
+    };
+  } finally {
+    await db.close();
   }
-
-    const updatedProfile = (await db
-    .update(profilesTable)
-    .set({ enabled_capabilities: capabilities })
-    .where(eq(profilesTable.uuid, profileUuid))
-    .returning()) as (typeof profilesTable.$inferSelect)[];
-
-  return updatedProfile[0];
 }

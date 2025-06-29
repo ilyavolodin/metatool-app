@@ -1,39 +1,27 @@
-import { drizzle } from 'drizzle-orm/sqlite-proxy';
-import { open } from 'sqlite';
-import sqlite3 from 'sqlite3';
-
-import * as schema from './schema';
-
 const dbPath = process.env.DATABASE_URL || 'sqlite.db';
 
-const sqliteProxy = async (sql: string, params: any[], method: string) => {
-  const db = await open({
-    filename: dbPath,
-    driver: sqlite3.Database
-  });
+export const getDb = async () => {
+  // Only run on server
+  if (typeof window !== 'undefined') {
+    throw new Error('Database can only be accessed on the server side');
+  }
 
   try {
-    let result;
-    switch (method) {
-      case 'run':
-        result = await db.run(sql, params);
-        break;
-      case 'get':
-        result = await db.get(sql, params);
-        break;
-      case 'all':
-        result = await db.all(sql, params);
-        break;
-      default:
-        throw new Error(`Unknown method: ${method}`);
-    }
-    return { rows: result };
-  } catch (e) {
-    console.error('Error from sqlite proxy:', e);
-    throw e;
-  } finally {
-    await db.close();
+    console.log('Opening database at:', dbPath);
+    
+    // Dynamic imports to ensure these only run on server
+    const sqlite3 = (await import('sqlite3')).default;
+    const { open } = await import('sqlite');
+    
+    const db = await open({
+      filename: dbPath,
+      driver: sqlite3.Database
+    });
+    
+    console.log('Database opened successfully');
+    return db;
+  } catch (error) {
+    console.error('Error opening database:', error);
+    throw error;
   }
 };
-
-export const db = drizzle(sqliteProxy, { schema });

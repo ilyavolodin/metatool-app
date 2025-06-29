@@ -1,42 +1,46 @@
-import { and, eq } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 
-import { db } from '@/db';
-import {
-  mcpServersTable,
-  McpServerStatus,
-  oauthSessionsTable,
-} from '@/db/schema';
+import { getDb } from '@/db';
+import { authenticateApiKey } from '@/app/api/auth';
 import * as logger from '@/lib/logger';
 
-import { authenticateApiKey } from '../auth';
+enum McpServerStatus {
+  ACTIVE = 1,
+  INACTIVE = 0,
+}
 
 export async function GET(request: Request) {
+  const db = await getDb();
   try {
     const auth = await authenticateApiKey(request);
     if (auth.error) return auth.error;
 
-    const activeMcpServers = await db
-      .select({
-        server: mcpServersTable,
-        tokens: oauthSessionsTable.tokens,
-      })
-      .from(mcpServersTable)
-      .leftJoin(
-        oauthSessionsTable,
-        eq(mcpServersTable.uuid, oauthSessionsTable.mcp_server_uuid)
-      )
-      .where(
-        and(
-          eq(mcpServersTable.status, McpServerStatus.ACTIVE),
-          eq(mcpServersTable.profile_uuid, auth.activeProfile.uuid)
-        )
-      );
+    const activeMcpServers = await db.all(
+      `SELECT
+        ms.uuid,
+        ms.name,
+        ms.description,
+        ms.command,
+        ms.args,
+        ms.env,
+        ms.url,
+        ms.type,
+        ms.status,
+        ms.created_at,
+        os.tokens AS oauth_tokens
+      FROM mcp_servers ms
+      LEFT JOIN oauth_sessions os ON ms.uuid = os.mcpServerUuid
+      WHERE ms.status = ? AND ms.projectId = ?;`,
+      McpServerStatus.ACTIVE,
+      auth.activeProfile.projectId
+    );
 
-    // Map the result to include tokens if they exist
-    const result = activeMcpServers.map(({ server, tokens }) => ({
+    const result = activeMcpServers.map((server: any) => ({
       ...server,
-      oauth_tokens: tokens || null,
+      args: JSON.parse(server.args || '[]'),
+      env: JSON.parse(server.env || '{}'),
+      oauth_tokens: server.oauth_tokens ? JSON.parse(server.oauth_tokens) : null,
+      created_at: new Date(server.created_at),
     }));
 
     return NextResponse.json(result);
@@ -46,37 +50,55 @@ export async function GET(request: Request) {
       { error: 'Failed to fetch active MCP servers' },
       { status: 500 }
     );
+  } finally {
+    await db.close();
   }
 }
 
 export async function POST(request: Request) {
+  const db = await getDb();
   try {
     const auth = await authenticateApiKey(request);
     if (auth.error) return auth.error;
 
     const body = await request.json();
-    const { uuid, name, description, command, args, env, status } = body;
+    const { uuid, name, description, command, args, env, status, url, type } = body;
 
-    const newMcpServer = await db
-      .insert(mcpServersTable)
-      .values({
-        uuid,
-        name,
-        description,
-        command,
-        args,
-        env,
-        status,
-        profile_uuid: auth.activeProfile.uuid,
-      })
-      .returning();
+    await db.run(
+      `INSERT INTO mcp_servers (
+        uuid, name, description, command, args, env, status, url, type, projectId, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
+      uuid,
+      name,
+      description,
+      command || null,
+      JSON.stringify(args || []),
+      JSON.stringify(env || {}),
+      status || McpServerStatus.ACTIVE,
+      url || null,
+      type || 'stdio',
+      auth.activeProfile.projectId,
+      Date.now()
+    );
 
-    return NextResponse.json(newMcpServer[0]);
+    const newMcpServer = await db.get(
+      `SELECT uuid, name, description, command, args, env, url, type, status, created_at FROM mcp_servers WHERE uuid = ?;`,
+      uuid
+    );
+
+    return NextResponse.json({
+      ...newMcpServer,
+      args: JSON.parse(newMcpServer.args || '[]'),
+      env: JSON.parse(newMcpServer.env || '{}'),
+      created_at: new Date(newMcpServer.created_at),
+    });
   } catch (error) {
     logger.error(error);
     return NextResponse.json(
       { error: 'Failed to create MCP server' },
       { status: 500 }
     );
+  } finally {
+    await db.close();
   }
 }

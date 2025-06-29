@@ -30,16 +30,6 @@ ENV NEXT_TELEMETRY_DISABLED 1
 
 RUN pnpm build:next
 
-# Migration stage
-FROM base AS migrator
-WORKDIR /app
-
-COPY --from=deps /app/node_modules ./node_modules
-COPY . .
-
-ENV NODE_ENV production
-CMD ["pnpm", "drizzle-kit", "migrate"]
-
 # Production image, copy all the files and run next
 FROM base AS runner
 WORKDIR /app
@@ -60,9 +50,13 @@ RUN mkdir .next
 RUN chown nextjs:nodejs .next
 
 # Automatically leverage output traces to reduce image size
-COPY --from=builder /app/drizzle.config.ts ./
+
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+
+RUN chown -R nextjs:nodejs /app
+
+RUN mkdir -p /app/data && chown nextjs:nodejs /app/data
 
 USER nextjs
 

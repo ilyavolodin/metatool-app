@@ -43,7 +43,19 @@ import {
     PaginationPrevious,
 } from '@/components/ui/pagination';
 import { Switch } from '@/components/ui/switch';
-import { ProfileCapability, ToolExecutionStatus } from '@/db/schema';
+enum ToolExecutionStatus {
+    SUCCESS = 'success',
+    ERROR = 'error',
+    PENDING = 'pending',
+}
+
+enum ProfileCapability {
+    TOOLS_MANAGEMENT = 'tools_management',
+    API_KEY_MANAGEMENT = 'api_key_management',
+    PROJECT_MANAGEMENT = 'project_management',
+    PROFILE_MANAGEMENT = 'profile_management',
+    TOOL_LOGS = 'tool_logs',
+}
 import { useProfiles } from '@/hooks/use-profiles';
 import { useToast } from '@/hooks/use-toast';
 
@@ -78,11 +90,11 @@ export default function ToolExecutionLogsPage() {
     }, [currentProfile]);
 
     const { data: logsData, mutate: mutateLogs, isLoading } = useSWR(
-        currentProfile?.uuid && hasToolLogsEnabled
-            ? ['getToolExecutionLogs', page, pageSize, JSON.stringify(filters), currentProfile.uuid, hasToolLogsEnabled]
+        currentProfile?.id && hasToolLogsEnabled
+            ? ['getToolExecutionLogs', page, pageSize, JSON.stringify(filters), currentProfile.id, hasToolLogsEnabled]
             : null,
         () => getToolExecutionLogs({
-            currentProfileUuid: currentProfile?.uuid || '',
+            currentProfileUuid: currentProfile?.id || '',
             limit: pageSize,
             offset: page * pageSize,
             ...filters,
@@ -90,17 +102,17 @@ export default function ToolExecutionLogsPage() {
     );
 
     const { data: mcpServers } = useSWR(
-        currentProfile?.uuid && hasToolLogsEnabled
-            ? ['getMcpServers', currentProfile.uuid]
+        currentProfile?.id && hasToolLogsEnabled
+            ? ['getMcpServers', currentProfile.id]
             : null,
-        () => getMcpServers(currentProfile?.uuid || '')
+        () => getMcpServers(currentProfile?.id || '')
     );
 
     const { data: toolNames } = useSWR(
-        currentProfile?.uuid && hasToolLogsEnabled
-            ? ['getToolNames', currentProfile.uuid]
+        currentProfile?.id && hasToolLogsEnabled
+            ? ['getToolNames', currentProfile.id]
             : null,
-        () => getToolNames(currentProfile?.uuid || '')
+        () => getToolNames(currentProfile?.id || '')
     );
 
     const handlePageSizeChange = (newSize: number) => {
@@ -259,14 +271,14 @@ export default function ToolExecutionLogsPage() {
             : (currentProfile.enabled_capabilities || []).filter((cap) => cap !== ProfileCapability.TOOL_LOGS);
 
         try {
-            await updateProfileCapabilities(currentProfile.uuid, newCapabilities);
+            await updateProfileCapabilities(currentProfile.id, newCapabilities);
             // Update the UI immediately for responsiveness
             setHasToolLogsEnabled(checked);
             // Refresh all data
             await mutateActiveProfile();
             await mutateLogs();
-            await mutate(['getMcpServers', currentProfile?.uuid]);
-            await mutate(['getToolNames', currentProfile?.uuid]);
+            await mutate(['getMcpServers', currentProfile?.id]);
+            await mutate(['getToolNames', currentProfile?.id]);
             toast({
                 description: checked ? "Tool Logs enabled" : "Tool Logs disabled"
             });
@@ -315,8 +327,8 @@ export default function ToolExecutionLogsPage() {
                                 variant="default"
                                 onClick={() => {
                                     mutateLogs();
-                                    mutate(['getMcpServers', currentProfile?.uuid]);
-                                    mutate(['getToolNames', currentProfile?.uuid]);
+                                    mutate(['getMcpServers', currentProfile?.id]);
+                                    mutate(['getToolNames', currentProfile?.id]);
                                 }}
                                 className="flex items-center gap-2"
                             >

@@ -12,8 +12,8 @@ import { useToast } from '@/hooks/use-toast';
 export default function SetupGuidePage() {
   const { currentProject } = useProjects();
   const { data: apiKey } = useSWR(
-    currentProject?.uuid ? `${currentProject?.uuid}/api-keys/getFirst` : null,
-    () => getFirstApiKey(currentProject?.uuid || '')
+    currentProject?.id ? `${currentProject?.id}/api-keys/getFirst` : null,
+    () => getFirstApiKey(currentProject?.id || '')
   );
   const { toast } = useToast();
 

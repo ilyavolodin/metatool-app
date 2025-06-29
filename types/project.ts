@@ -1,6 +1,5 @@
 export interface Project {
-  uuid: string;
+  id: string;
   name: string;
-  created_at: Date;
-  active_profile_uuid: string | null;
+  activeProfileId: string | null;
 }

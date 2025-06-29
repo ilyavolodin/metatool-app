@@ -41,7 +41,23 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
-import { McpServerStatus, McpServerType, ProfileCapability } from '@/db/schema';
+enum McpServerStatus {
+  ACTIVE = 1,
+  INACTIVE = 0,
+}
+
+enum McpServerType {
+  STDIO = 'stdio',
+  SSE = 'sse',
+  STREAMABLE_HTTP = 'streamable_http',
+}
+
+enum ProfileCapability {
+  TOOLS_MANAGEMENT = 'tools_management',
+  API_KEY_MANAGEMENT = 'api_key_management',
+  PROJECT_MANAGEMENT = 'project_management',
+  PROFILE_MANAGEMENT = 'profile_management',
+}
 import { useProfiles } from '@/hooks/use-profiles';
 import { useProjects } from '@/hooks/use-projects';
 import { useToast } from '@/hooks/use-toast';
@@ -77,15 +93,15 @@ export default function McpServerDetailPage({
     error,
     mutate: mutateMcpServer,
   } = useSWR<McpServer | undefined>(
-    uuid && currentProfile?.uuid
-      ? ['getMcpServerByUuid', uuid, currentProfile?.uuid]
+    uuid && currentProfile?.id
+      ? ['getMcpServerByUuid', uuid, currentProfile?.id]
       : null,
-    () => getMcpServerByUuid(currentProfile?.uuid || '', uuid!)
+    () => getMcpServerByUuid(currentProfile?.id || '', uuid!)
   );
 
   const { data: apiKey } = useSWR(
-    currentProject?.uuid ? `${currentProject?.uuid}/api-keys/getFirst` : null,
-    () => getFirstApiKey(currentProject?.uuid || '')
+    currentProject?.id ? `${currentProject?.id}/api-keys/getFirst` : null,
+    () => getFirstApiKey(currentProject?.id || '')
   );
 
   const { mutate: globalMutate } = useSWRConfig();
@@ -106,7 +122,7 @@ export default function McpServerDetailPage({
     makeRequest
   } = useConnection({
     mcpServerUuid: uuid,
-    currentProfileUuid: currentProfile?.uuid,
+    currentProfileId: currentProfile?.id,
     bearerToken: apiKey?.api_key,
     onNotification: handleNotification,
     onStdErrNotification: handleNotification,
@@ -156,7 +172,7 @@ export default function McpServerDetailPage({
       args: '',
       env: '',
       url: '',
-      type: McpServerType.STDIO,
+      type: McpServerType.STDIO as McpServerType,
     },
   });
 
@@ -171,7 +187,7 @@ export default function McpServerDetailPage({
           .map(([key, value]) => `${key}=${value}`)
           .join('\n'),
         url: mcpServer.url || '',
-        type: mcpServer.type,
+        type: mcpServer.type as McpServerType,
       });
     }
   }, [mcpServer, form]);
@@ -232,7 +248,7 @@ export default function McpServerDetailPage({
     url: string;
     type: McpServerType;
   }) => {
-    if (!mcpServer || !currentProfile?.uuid) return;
+    if (!mcpServer || !currentProfile?.id) return;
 
     // Process args and env before submission
     const processedData = {
@@ -258,15 +274,15 @@ export default function McpServerDetailPage({
       url: data.type === McpServerType.SSE || data.type === McpServerType.STREAMABLE_HTTP ? data.url : undefined,
     };
 
-    await updateMcpServer(currentProfile.uuid, mcpServer.uuid, processedData);
+    await updateMcpServer(currentProfile.id, mcpServer.uuid, processedData);
     await mutateMcpServer();
     setIsEditing(false);
   };
 
   const handleDelete = async () => {
-    if (!mcpServer || !currentProfile?.uuid) return;
+    if (!mcpServer || !currentProfile?.id) return;
     if (confirm('Are you sure you want to delete this MCP server?')) {
-      await deleteMcpServerByUuid(currentProfile.uuid, mcpServer.uuid);
+      await deleteMcpServerByUuid(currentProfile.id, mcpServer.uuid);
       router.push('/mcp-servers');
     }
   };
@@ -515,7 +531,7 @@ export default function McpServerDetailPage({
                             .map(([key, value]) => `${key}=${value}`)
                             .join('\n'),
                           url: mcpServer.url || '',
-                          type: mcpServer.type,
+                          type: mcpServer.type as McpServerType,
                         });
                         setIsEditing(false);
                       }}>
@@ -592,9 +608,9 @@ export default function McpServerDetailPage({
               <Switch
                 checked={mcpServer.status === McpServerStatus.ACTIVE}
                 onCheckedChange={async (checked) => {
-                  if (!currentProfile?.uuid || !mcpServer.uuid) return;
+                  if (!currentProfile?.id || !mcpServer.uuid) return;
                   await toggleMcpServerStatus(
-                    currentProfile.uuid,
+                    currentProfile.id,
                     mcpServer.uuid,
                     checked ? McpServerStatus.ACTIVE : McpServerStatus.INACTIVE
                   );
@@ -612,7 +628,7 @@ export default function McpServerDetailPage({
 
             <p className='mb-3'>
               <strong>Created At:</strong>{' '}
-              {new Date(mcpServer.created_at).toLocaleString()}
+              {new Date(mcpServer.createdAt).toLocaleString()}
             </p>
 
             <p className='mb-3'>
@@ -670,7 +686,10 @@ export default function McpServerDetailPage({
 
       {/* Tool Management Section */}
       <ToolManagement
-        mcpServer={mcpServer}
+        mcpServer={{
+          uuid: mcpServer.uuid,
+          type: mcpServer.type as McpServerType
+        }}
         hasToolsManagement={hasToolsManagement || false}
         apiKey={apiKey}
         makeRequest={makeRequest}

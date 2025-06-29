@@ -1,7 +1,9 @@
 export interface ApiKey {
-  uuid: string;
-  project_uuid: string;
+  id: string;
+  key: string;
+  projectId: string;
+  name: string | null;
   api_key: string;
-  name: string;
-  created_at: Date;
+  createdAt: string;
+  updatedAt: string;
 }

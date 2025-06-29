@@ -12,10 +12,10 @@ export const useProjects = () => {
 
   // Load saved project on mount
   useEffect(() => {
-    const savedProjectUuid = localStorage.getItem(CURRENT_PROJECT_KEY);
+    const savedProjectId = localStorage.getItem(CURRENT_PROJECT_KEY);
     if (data?.length) {
-      if (savedProjectUuid) {
-        const savedProject = data.find((p) => p.uuid === savedProjectUuid);
+      if (savedProjectId) {
+        const savedProject = data.find((p) => p.id === savedProjectId);
         if (savedProject) {
           setCurrentProject(savedProject);
           return;
@@ -31,7 +31,7 @@ export const useProjects = () => {
     setCurrentProject(project);
 
     if (project) {
-      localStorage.setItem(CURRENT_PROJECT_KEY, project.uuid);
+      localStorage.setItem(CURRENT_PROJECT_KEY, project.id);
     } else {
       localStorage.removeItem(CURRENT_PROJECT_KEY);
     }

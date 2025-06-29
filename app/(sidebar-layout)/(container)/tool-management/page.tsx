@@ -1,312 +1,28 @@
 'use client';
 
-import { ListToolsResultSchema } from '@modelcontextprotocol/sdk/types.js';
 import {
     createColumnHelper,
     flexRender,
     getCoreRowModel,
     useReactTable,
 } from '@tanstack/react-table';
-import { RefreshCw } from 'lucide-react'; // Removed Copy
-import { useCallback, useEffect, useState } from 'react';
-import useSWR, { useSWRConfig } from 'swr';
+import { useParams } from 'next/navigation';
+import useSWR from 'swr';
 
-import { getFirstApiKey } from '@/app/actions/api-keys';
-import { getMcpServers } from '@/app/actions/mcp-servers';
-import { updateProfileCapabilities } from '@/app/actions/profiles';
-import { getToolsByMcpServerUuid, saveToolsToDatabase, toggleToolStatus } from '@/app/actions/tools';
-import { Button } from '@/components/ui/button';
-import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
-} from '@/components/ui/card';
-// Removed Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger
-import { Label } from '@/components/ui/label';
+import { getToolsByMcpServerUuid, toggleToolStatus } from '@/app/actions/tools';
 import { Switch } from '@/components/ui/switch';
-// Removed WorkspaceMode from import
-import { McpServerStatus, ProfileCapability, ToggleStatus } from '@/db/schema';
-import { useProfiles } from '@/hooks/use-profiles';
-import { useProjects } from '@/hooks/use-projects';
-import { useToast } from '@/hooks/use-toast';
-import { useConnectionMulti } from '@/hooks/useConnectionMulti';
-import * as logger from '@/lib/logger';
-// Removed Copy import as it's no longer used
-// import { Copy } from 'lucide-react';
 
-export default function ToolsManagementPage() {
-    const { currentProfile, mutateActiveProfile } = useProfiles();
-    const { currentProject } = useProjects();
-    const { toast } = useToast();
-    const [expandedServers, setExpandedServers] = useState<Set<string>>(new Set());
-    const [refreshingServers, setRefreshingServers] = useState<Set<string>>(new Set());
-    const { mutate: globalMutate } = useSWRConfig();
-
-    const { data: apiKey } = useSWR(
-        currentProject?.uuid ? `${currentProject?.uuid}/api-keys/getFirst` : null,
-        () => getFirstApiKey(currentProject?.uuid || '')
-    );
-
-    const {
-        connectionStatuses,
-        connect,
-        disconnect,
-        makeRequest
-    } = useConnectionMulti({ bearerToken: apiKey?.api_key });
-
-    const hasToolsManagement = currentProfile?.enabled_capabilities?.includes(ProfileCapability.TOOLS_MANAGEMENT);
-
-    const { data: mcpServers, mutate: mutateMcpServers } = useSWR(
-        currentProfile?.uuid ? ['getMcpServers', currentProfile.uuid] : null,
-        () => getMcpServers(currentProfile?.uuid || '', McpServerStatus.ACTIVE)
-    );
-
-    // Auto-expand all servers when data is loaded
-    useEffect(() => {
-        if (mcpServers) {
-            setExpandedServers(new Set(mcpServers.map(server => server.uuid)));
-        }
-    }, [mcpServers]);
-
-
-    const allToolsData = useSWR(
-        mcpServers && mcpServers.length > 0 ? ['allTools', mcpServers.map(s => s.uuid)] : null,
-        async () => {
-            const results = await Promise.all(
-                mcpServers!.map(server => getToolsByMcpServerUuid(server.uuid))
-            );
-            return results.flat();
-        }
-    );
-
-    // Calculate global tool counts
-    const globalTotalTools = allToolsData.data?.length || 0;
-    const globalEnabledTools = allToolsData.data?.filter(tool => tool.status === ToggleStatus.ACTIVE).length || 0;
-
-    // Function to refresh global tools data
-    const refreshGlobalTools = useCallback(() => {
-        allToolsData.mutate();
-    }, [allToolsData]);
-
-    useEffect(() => {
-        if (mcpServers) {
-            refreshGlobalTools();
-        }
-    }, [mcpServers, refreshGlobalTools]);
-
-    const toggleServerExpansion = (serverUuid: string) => {
-        const newExpanded = new Set(expandedServers);
-        if (newExpanded.has(serverUuid)) {
-            newExpanded.delete(serverUuid);
-        } else {
-            newExpanded.add(serverUuid);
-        }
-        setExpandedServers(newExpanded);
-    };
-
-    // Function to refresh tools for a specific SSE server
-    const refreshSseTools = async (serverUuid: string) => {
-        if (!currentProfile?.uuid) {
-            toast({
-                title: "Error",
-                description: "Profile information is missing",
-                variant: "destructive",
-            });
-            return;
-        }
-
-        try {
-            // Mark this server as refreshing
-            setRefreshingServers(prev => new Set([...prev, serverUuid]));
-
-            // Connect to the server
-            await connect(serverUuid);
-
-            // Request the tool list
-            const response = await makeRequest(
-                serverUuid,
-                {
-                    method: "tools/list",
-                    params: {}
-                },
-                ListToolsResultSchema
-            );
-
-            // Save tools to the database
-            if (response.tools.length > 0) {
-                await saveToolsToDatabase(serverUuid, response.tools);
-
-                // Force refresh data in the database
-                await getToolsByMcpServerUuid(serverUuid);
-
-                // Refresh the UI by mutating the SWR cache for this server's tools
-                globalMutate(['getToolsByMcpServerUuid', serverUuid]);
-                refreshGlobalTools();
-
-                toast({
-                    description: `${response.tools.length} tools refreshed successfully`
-                });
-            } else {
-                toast({
-                    description: "No tools found to refresh"
-                });
-
-                // Still refresh the UI in case tools were removed
-                globalMutate(['getToolsByMcpServerUuid', serverUuid]);
-            }
-        } catch (error) {
-            logger.error("Error refreshing SSE tools:", error);
-            toast({
-                variant: "destructive",
-                title: "Error refreshing tools",
-                description: error instanceof Error ? error.message : "An unknown error occurred"
-            });
-        } finally {
-            // Disconnect from the server
-            try {
-                await disconnect(serverUuid);
-            } catch (disconnectError) {
-                logger.error("Error disconnecting:", disconnectError);
-            }
-
-            // Mark this server as no longer refreshing
-            setRefreshingServers(prev => {
-                const next = new Set([...prev]);
-                next.delete(serverUuid);
-                return next;
-            });
-        }
-    };
-
-    const handleToggleToolsManagement = async (checked: boolean) => {
-        if (!currentProfile) return;
-
-        const newCapabilities = checked
-            ? [...(currentProfile.enabled_capabilities || []), ProfileCapability.TOOLS_MANAGEMENT]
-            : (currentProfile.enabled_capabilities || []).filter(cap => cap !== ProfileCapability.TOOLS_MANAGEMENT);
-
-        try {
-            await updateProfileCapabilities(currentProfile.uuid, newCapabilities);
-            await Promise.all([
-                mutateActiveProfile(),
-                mutateMcpServers()
-            ]);
-            toast({
-                description: checked ? "Tool Management enabled" : "Tool Management disabled"
-            });
-            refreshGlobalTools();
-        } catch (error) {
-            toast({
-                variant: "destructive",
-                title: "Error updating capabilities",
-                description: error instanceof Error ? error.message : "An unknown error occurred"
-            });
-        }
-    };
-
-    if (!mcpServers) return <div>Loading...</div>;
-
-    return (
-        <div className="container mx-auto px-4 py-8">
-            <div className="flex justify-between items-center mb-8">
-                <div>
-                    <h1 className="text-3xl font-bold">Tool Management</h1>
-                    <p className="text-muted-foreground mt-2">
-                        Manage all tools across your active MCP servers
-                    </p>
-                    {hasToolsManagement && (
-                        <div className="mt-3 text-sm">
-                            <span className="font-medium text-green-600">{globalEnabledTools} enabled</span>
-                            <span className="mx-2 text-muted-foreground">•</span>
-                            <span className="font-medium text-foreground">{globalTotalTools} total tools</span>
-                            <span className="ml-2 text-muted-foreground">across all servers</span>
-                        </div>
-                    )}
-                </div>
-                <div className="flex items-center space-x-2">
-                    <Switch
-                        id="tool-management"
-                        checked={hasToolsManagement}
-                        onCheckedChange={handleToggleToolsManagement}
-                    />
-                    <Label htmlFor="tool-management">
-                        Enable Tool Management
-                    </Label>
-                </div>
-            </div>
-
-            {!hasToolsManagement ? (
-                <Card>
-                    <CardContent className="pt-6">
-                        <p className="text-muted-foreground">
-                            Tool Management is currently disabled. Enable it to manage your tools.
-                        </p>
-                    </CardContent>
-                </Card>
-            ) : (
-                <div className="space-y-6">
-                    {mcpServers.map((server) => (
-                        <Card key={server.uuid} className="shadow-none">
-                            <CardHeader className="pb-4">
-                                <div className="flex items-center justify-between">
-                                    <div>
-                                        <CardTitle className="text-xl">{server.name}</CardTitle>
-                                        <CardDescription>{server.description || 'No description'}</CardDescription>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        {/* Simplified: Always show the button that calls refreshSseTools,
-                                            as the distinction for LOCAL mode STDIO servers is gone.
-                                            The refreshSseTools function uses makeRequest, which should work for any server type
-                                            connected via the MetaMCP server if it supports 'tools/list'.
-                                        */}
-                                        <Button
-                                            size="sm"
-                                            onClick={() => refreshSseTools(server.uuid)}
-                                            disabled={refreshingServers.has(server.uuid) ||
-                                                connectionStatuses[server.uuid] === 'connecting'}>
-                                            {refreshingServers.has(server.uuid) ||
-                                                connectionStatuses[server.uuid] === 'connecting' ? (
-                                                <>
-                                                    <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                                                    {connectionStatuses[server.uuid] === 'connecting'
-                                                        ? 'Connecting...'
-                                                        : 'Refreshing...'}
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <RefreshCw className="mr-2 h-4 w-4" />
-                                                    Refresh
-                                                </>
-                                            )}
-                                        </Button>
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            onClick={() => toggleServerExpansion(server.uuid)}>
-                                            {expandedServers.has(server.uuid) ? 'Hide Tools' : 'Show Tools'}
-                                        </Button>
-                                    </div>
-                                </div>
-                            </CardHeader>
-                            {expandedServers.has(server.uuid) && (
-                                <CardContent>
-                                    <ToolsList mcpServerUuid={server.uuid} onToolToggle={refreshGlobalTools} />
-                                </CardContent>
-                            )}
-                        </Card>
-                    ))}
-                </div>
-            )}
-        </div>
-    );
+enum ToggleStatus {
+  ACTIVE = 1,
+  INACTIVE = 0,
 }
 
-function ToolsList({ mcpServerUuid, onToolToggle }: { mcpServerUuid: string; onToolToggle?: () => void }) {
+export default function ToolsManagementPage() {
+    const { uuid: mcpServerUuid } = useParams();
+
     const { data: tools, error, mutate } = useSWR(
-        mcpServerUuid ? ['getToolsByMcpServerUuid', mcpServerUuid] : null,
-        () => getToolsByMcpServerUuid(mcpServerUuid)
+        mcpServerUuid ? ['getToolsByMcpServerUuid', mcpServerUuid as string] : null,
+        () => getToolsByMcpServerUuid(mcpServerUuid as string)
     );
 
     // Calculate enabled vs total tools
@@ -334,7 +50,6 @@ function ToolsList({ mcpServerUuid, onToolToggle }: { mcpServerUuid: string; onT
                             checked ? ToggleStatus.ACTIVE : ToggleStatus.INACTIVE
                         );
                         mutate();
-                        onToolToggle?.();
                     }}
                 />
             ),

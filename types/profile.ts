@@ -1,10 +1,15 @@
-import { ProfileCapability } from '@/db/schema'; // Removed WorkspaceMode
-
 export interface Profile {
-  uuid: string;
+  id: string;
   name: string;
-  created_at: Date;
-  project_uuid: string;
-  enabled_capabilities: ProfileCapability[];
-  // workspace_mode: WorkspaceMode; // Removed
+  projectId: string;
+  capabilities: string; // Stored as JSON string
+  enabled_capabilities: ProfileCapability[]; // Parsed capabilities
+}
+
+export enum ProfileCapability {
+  TOOLS_MANAGEMENT = 'tools_management',
+  API_KEY_MANAGEMENT = 'api_key_management',
+  PROJECT_MANAGEMENT = 'project_management',
+  PROFILE_MANAGEMENT = 'profile_management',
+  TOOL_LOGS = 'tool_logs',
 }

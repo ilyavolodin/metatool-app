@@ -1,31 +1,27 @@
-import { eq } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 
-import { db } from '@/db';
-import { profilesTable } from '@/db/schema';
+import { getDb } from '@/db';
 import * as logger from '@/lib/logger';
 
 import { authenticateApiKey } from '../auth';
 
 export async function GET(request: Request) {
+  const db = await getDb();
   try {
     const auth = await authenticateApiKey(request);
     if (auth.error) return auth.error;
 
-    const profile = await db
-      .select({
-        enabled_capabilities: profilesTable.enabled_capabilities,
-      })
-      .from(profilesTable)
-      .where(eq(profilesTable.uuid, auth.activeProfile.uuid))
-      .limit(1);
+    const profile = await db.get(
+      `SELECT capabilities FROM profiles WHERE id = ? LIMIT 1;`,
+      auth.activeProfile.id
+    );
 
-    if (profile.length === 0) {
+    if (!profile) {
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
     }
 
     return NextResponse.json({
-      profileCapabilities: profile[0].enabled_capabilities,
+      profileCapabilities: JSON.parse(profile.capabilities || '[]'),
     });
   } catch (error) {
     logger.error(error);
@@ -33,5 +29,7 @@ export async function GET(request: Request) {
       { error: 'Failed to fetch profile capabilities' },
       { status: 500 }
     );
+  } finally {
+    await db.close();
   }
 }

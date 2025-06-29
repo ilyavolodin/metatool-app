@@ -83,7 +83,7 @@ export function ProjectSwitcher() {
                 <CommandGroup heading='Projects (MCP Clients)'>
                   {projects.map((project) => (
                     <CommandItem
-                      key={project.uuid}
+                      key={project.id}
                       onSelect={() => {
                         setCurrentProject(project as Project);
                         setOpen(false);
@@ -93,7 +93,7 @@ export function ProjectSwitcher() {
                       <Check
                         className={cn(
                           'ml-auto h-4 w-4',
-                          currentProject?.uuid === project.uuid
+                          currentProject?.id === project.id
                             ? 'opacity-100'
                             : 'opacity-0'
                         )}

@@ -1,8 +1,7 @@
-import { randomUUID } from 'node:crypto';
-
 import { SseError } from '@modelcontextprotocol/sdk/client/sse.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
+import { nanoid } from 'nanoid';
 import { NextRequest, NextResponse } from 'next/server';
 
 import { mcpProxy } from '@/app/lib/mcpUtils'; // Corrected path
@@ -125,7 +124,7 @@ export async function POST(req: NextRequest, context: { params: Promise<{ apiKey
       logger.log(`Connected initial MCP client to backing server transport (API key ${apiKeyFromPath} in path)`);
 
       const webAppTransport = new StreamableHTTPServerTransport({
-        sessionIdGenerator: randomUUID,
+        sessionIdGenerator: nanoid,
         onsessioninitialized: async (newSessionId) => {
           logger.log(`Streamable web app transport ${newSessionId} initialized (API key ${apiKeyFromPath} in path)`);
           sessionId = newSessionId;

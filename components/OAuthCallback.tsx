@@ -30,10 +30,10 @@ const OAuthCallback = () => {
 
       try {
         // Get profile UUID from session if available
-        const profileUuid = sessionStorage.getItem(SESSION_KEYS.PROFILE_UUID);
+        const profileId = sessionStorage.getItem(SESSION_KEYS.PROFILE_ID);
 
         // Create auth provider with existing server UUID
-        const authProvider = createAuthProvider(mcpServerUuid, profileUuid || undefined);
+        const authProvider = createAuthProvider(mcpServerUuid, profileId || undefined);
 
         // Complete the OAuth flow
         const result = await auth(authProvider, {
@@ -67,7 +67,7 @@ const OAuthCallback = () => {
         sessionStorage.removeItem(`${storagePrefix}code_verifier`);
         sessionStorage.removeItem(SESSION_KEYS.SERVER_URL);
         sessionStorage.removeItem(SESSION_KEYS.MCP_SERVER_UUID);
-        sessionStorage.removeItem(SESSION_KEYS.PROFILE_UUID);
+        sessionStorage.removeItem(SESSION_KEYS.PROFILE_ID);
 
         // Redirect back to the MCP server detail page
         window.location.href = `/mcp-servers/${mcpServerUuid}`;

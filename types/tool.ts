@@ -1,14 +1,15 @@
-import { ToggleStatus } from '@/db/schema';
+enum ToggleStatus {
+  ACTIVE = 1,
+  INACTIVE = 0,
+}
 
 export interface Tool {
-  uuid: string;
+  id: string;
+  mcpServerUuid: string;
   name: string;
   description: string | null;
-  toolSchema: {
-    type: 'object';
-    properties?: Record<string, any>;
-  };
-  created_at: Date;
-  mcp_server_uuid: string;
+  inputSchema: Record<string, any>;
+  outputSchema: Record<string, any>;
+  isAvailable: ToggleStatus;
   status: ToggleStatus;
 }

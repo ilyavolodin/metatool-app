@@ -44,7 +44,16 @@ import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
-import { McpServerStatus, McpServerType } from '@/db/schema';
+enum McpServerType {
+  STDIO = 'stdio',
+  SSE = 'sse',
+  STREAMABLE_HTTP = 'streamable_http',
+}
+
+enum McpServerStatus {
+  ACTIVE = 1,
+  INACTIVE = 0,
+}
 import { useProfiles } from '@/hooks/use-profiles';
 import { useToast } from '@/hooks/use-toast';
 import * as logger from '@/lib/logger';
@@ -80,8 +89,8 @@ export default function MCPServersPage() {
   });
 
   const { data: servers = [], mutate } = useSWR<McpServer[]>(
-    currentProfile?.uuid ? `${currentProfile.uuid}/mcp-servers` : null,
-    () => getMcpServers(currentProfile?.uuid || '')
+    currentProfile?.id ? `${currentProfile.id}/mcp-servers` : null,
+    () => getMcpServers(currentProfile?.id || '', McpServerStatus.ACTIVE)
   );
 
   const columns = [
@@ -120,9 +129,9 @@ export default function MCPServersPage() {
         <Switch
           checked={info.getValue() === McpServerStatus.ACTIVE}
           onCheckedChange={async (checked) => {
-            if (!currentProfile?.uuid || !info.row.original.uuid) return;
+            if (!currentProfile?.id || !info.row.original.uuid) return;
             await toggleMcpServerStatus(
-              currentProfile.uuid,
+              currentProfile.id,
               info.row.original.uuid,
               checked ? McpServerStatus.ACTIVE : McpServerStatus.INACTIVE
             );
@@ -132,7 +141,7 @@ export default function MCPServersPage() {
       ),
       header: 'Status',
     }),
-    columnHelper.accessor('created_at', {
+    columnHelper.accessor('createdAt', {
       cell: (info) => new Date(info.getValue()).toLocaleString(),
       header: 'Created At',
     }),
@@ -143,10 +152,10 @@ export default function MCPServersPage() {
           variant='destructive'
           size='sm'
           onClick={async () => {
-            if (!currentProfile?.uuid || !info.row.original.uuid) return;
+            if (!currentProfile?.id || !info.row.original.uuid) return;
             if (confirm('Are you sure you want to delete this MCP server?')) {
               await deleteMcpServerByUuid(
-                currentProfile.uuid,
+                currentProfile.id,
                 info.row.original.uuid
               );
               mutate();
@@ -395,7 +404,7 @@ export default function MCPServersPage() {
                         // Import the servers
                         const result = await bulkImportMcpServers(
                           processedJson,
-                          currentProfile?.uuid
+                          currentProfile?.id
                         );
 
                         // Refresh the server list
@@ -508,7 +517,7 @@ export default function MCPServersPage() {
                   <Form {...form}>
                     <form
                       onSubmit={form.handleSubmit(async (data) => {
-                        if (!currentProfile?.uuid) return;
+                        if (!currentProfile?.id) return;
                         setIsSubmitting(true);
                         try {
                           const processedData = {
@@ -532,7 +541,7 @@ export default function MCPServersPage() {
                           };
 
                           const newServer = await createMcpServer(
-                            currentProfile.uuid,
+                            currentProfile.id,
                             processedData
                           );
                           await mutate();
@@ -659,7 +668,7 @@ export default function MCPServersPage() {
                   <Form {...form}>
                     <form
                       onSubmit={form.handleSubmit(async (data) => {
-                        if (!currentProfile?.uuid) return;
+                        if (!currentProfile?.id) return;
                         setIsSubmitting(true);
                         try {
                           const processedData = {
@@ -672,7 +681,7 @@ export default function MCPServersPage() {
                           };
 
                           const newServer = await createMcpServer(
-                            currentProfile.uuid,
+                            currentProfile.id,
                             processedData
                           );
                           await mutate();
@@ -766,7 +775,7 @@ export default function MCPServersPage() {
                   <Form {...form}>
                     <form
                       onSubmit={form.handleSubmit(async (data) => {
-                        if (!currentProfile?.uuid) return;
+                        if (!currentProfile?.id) return;
                         setIsSubmitting(true);
                         try {
                           const processedData = {
@@ -779,7 +788,7 @@ export default function MCPServersPage() {
                           };
 
                           const newServer = await createMcpServer(
-                            currentProfile.uuid,
+                            currentProfile.id,
                             processedData
                           );
                           await mutate();

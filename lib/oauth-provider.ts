@@ -12,12 +12,12 @@ import { getOAuthSession, saveOAuthSession } from '@/app/actions/oauth';
 // OAuth client provider that works with a specific MCP server
 class DbOAuthClientProvider implements OAuthClientProvider {
   private mcpServerUuid: string;
-  private profileUuid?: string;
+  private projectId?: string;
   private storagePrefix: string;
 
-  constructor(mcpServerUuid: string, profileUuid?: string) {
+  constructor(mcpServerUuid: string, projectId?: string) {
     this.mcpServerUuid = mcpServerUuid;
-    this.profileUuid = profileUuid;
+    this.projectId = projectId;
     this.storagePrefix = `oauth_${this.mcpServerUuid}_`;
   }
 
@@ -38,10 +38,10 @@ class DbOAuthClientProvider implements OAuthClientProvider {
 
   // Check if the server exists in the database
   private async serverExists() {
-    if (!this.profileUuid) return false;
+    if (!this.projectId) return false;
 
     const server = await getMcpServerByUuid(
-      this.profileUuid,
+      this.projectId,
       this.mcpServerUuid
     );
 
@@ -186,7 +186,7 @@ class DbOAuthClientProvider implements OAuthClientProvider {
 // Factory function to create an OAuth provider for a specific MCP server
 export function createAuthProvider(
   mcpServerUuid: string,
-  profileUuid?: string
+  projectId?: string
 ): OAuthClientProvider {
-  return new DbOAuthClientProvider(mcpServerUuid, profileUuid);
+  return new DbOAuthClientProvider(mcpServerUuid, projectId);
 }
